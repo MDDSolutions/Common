@@ -150,13 +150,13 @@
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\Standard\MDDFoundation\MDDFoundation\MDDFoundation.csproj">
-      <Project>{aeaedd4c-d9dd-48b0-9303-139813fcd32e}</Project>
-      <Name>MDDFoundation</Name>
-    </ProjectReference>
+    <None Include="Properties\DataSources\ComparisonResult.datasource" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Properties\DataSources\ComparisonResult.datasource" />
+    <ProjectReference Include="..\..\Standard\MDDFoundation\MDDFoundation.csproj">
+      <Project>{546cf1b0-b4b6-4985-aa0d-b92d86f9942a}</Project>
+      <Name>MDDFoundation</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
