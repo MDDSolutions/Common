@@ -115,6 +115,9 @@
       <DependentUpon>PictureBoxWithTextBox.cs</DependentUpon>
     </Compile>
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="RadioButtonGroup.cs">
+      <SubType>Component</SubType>
+    </Compile>
     <Compile Include="TextBoxWithObject.cs">
       <SubType>Component</SubType>
     </Compile>
