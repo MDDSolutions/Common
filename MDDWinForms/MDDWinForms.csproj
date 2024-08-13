@@ -95,6 +95,12 @@
     <Compile Include="frmSearch.Designer.cs">
       <DependentUpon>frmSearch.cs</DependentUpon>
     </Compile>
+    <Compile Include="frmSearchReplace.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmSearchReplace.Designer.cs">
+      <DependentUpon>frmSearchReplace.cs</DependentUpon>
+    </Compile>
     <Compile Include="MDDForms.cs" />
     <Compile Include="frmBasicProgress.cs">
       <SubType>Form</SubType>
@@ -147,6 +153,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="frmSearch.resx">
       <DependentUpon>frmSearch.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="frmSearchReplace.resx">
+      <DependentUpon>frmSearchReplace.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="PictureBoxWithTextBox.resx">
       <DependentUpon>PictureBoxWithTextBox.cs</DependentUpon>
