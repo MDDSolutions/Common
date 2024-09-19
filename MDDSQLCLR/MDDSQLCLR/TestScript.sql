@@ -18,5 +18,5 @@ FROM dbo.RegexSplit(@input, @splitPattern);
 
 -- Test RegexMatches
 DECLARE @matchPattern NVARCHAR(MAX) = '\b\w{4}\b'; -- Matches all 4-letter words
-SELECT Value AS MatchResult
+SELECT *
 FROM dbo.RegexMatches(@input, @matchPattern);
