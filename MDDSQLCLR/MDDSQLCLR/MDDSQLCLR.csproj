@@ -45,6 +45,7 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="MDDSQLCLR.sql" />
+    <Content Include="TestScript.sql" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

@@ -1,36 +1,47 @@
 /*
-
 https://github.com/MDDSolutions/Common/tree/main/MDDSQLCLR
-
-using System.Data.SqlTypes;
-using System.Text.RegularExpressions;
-using Microsoft.SqlServer.Server;
-
-namespace MDDSQLCLR
-{
-    public class RegexFunctions
-    {
-        [SqlFunction(IsDeterministic = true, IsPrecise = true)]
-        public static SqlBoolean RegexMatch(SqlString input, SqlString pattern)
-        {
-            if (input.IsNull || pattern.IsNull)
-                return SqlBoolean.Null;
-
-            return Regex.IsMatch(input.Value, pattern.Value, RegexOptions.IgnoreCase);
-        }
-    }
-
-}
 */
 
+-- Drop functions if they exist
+IF EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'dbo.RegexMatch') AND type IN (N'FN', N'IF', N'TF', N'FS', N'FT'))
+    DROP FUNCTION dbo.RegexMatch;
 
+IF EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'dbo.RegexReplace') AND type IN (N'FN', N'IF', N'TF', N'FS', N'FT'))
+    DROP FUNCTION dbo.RegexReplace;
 
+IF EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'dbo.RegexSplit') AND type IN (N'FN', N'IF', N'TF', N'FS', N'FT'))
+    DROP FUNCTION dbo.RegexSplit;
+
+IF EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'dbo.RegexMatches') AND type IN (N'FN', N'IF', N'TF', N'FS', N'FT'))
+    DROP FUNCTION dbo.RegexMatches;
+
+-- Drop assembly if it exists
+IF EXISTS (SELECT * FROM sys.assemblies WHERE name = N'MDDSQLCLR')
+    DROP ASSEMBLY MDDSQLCLR;
+
+-- Create assembly
 CREATE ASSEMBLY MDDSQLCLR
 FROM 'D:\Temp\MDDSQLCLR.dll'
 WITH PERMISSION_SET = SAFE;
+GO
 
-
+-- Create functions
 CREATE FUNCTION dbo.RegexMatch(@input NVARCHAR(MAX), @pattern NVARCHAR(MAX))
 RETURNS BIT
 AS EXTERNAL NAME MDDSQLCLR.[MDDSQLCLR.RegexFunctions].RegexMatch;
+GO
 
+CREATE FUNCTION dbo.RegexReplace(@input NVARCHAR(MAX), @pattern NVARCHAR(MAX), @replacement NVARCHAR(MAX))
+RETURNS NVARCHAR(MAX)
+AS EXTERNAL NAME MDDSQLCLR.[MDDSQLCLR.RegexFunctions].RegexReplace;
+GO
+
+CREATE FUNCTION dbo.RegexSplit(@input NVARCHAR(MAX), @pattern NVARCHAR(MAX))
+RETURNS TABLE (Value NVARCHAR(MAX))
+AS EXTERNAL NAME MDDSQLCLR.[MDDSQLCLR.RegexFunctions].RegexSplit;
+GO
+
+CREATE FUNCTION dbo.RegexMatches(@input NVARCHAR(MAX), @pattern NVARCHAR(MAX))
+RETURNS TABLE (Value NVARCHAR(MAX))
+AS EXTERNAL NAME MDDSQLCLR.[MDDSQLCLR.RegexFunctions].RegexMatches;
+GO
