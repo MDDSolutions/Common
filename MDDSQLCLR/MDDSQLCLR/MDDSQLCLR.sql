@@ -18,10 +18,18 @@ IF EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'dbo.RegexMatc
 -- Drop assembly if it exists
 IF EXISTS (SELECT * FROM sys.assemblies WHERE name = N'MDDSQLCLR')
     DROP ASSEMBLY MDDSQLCLR;
+GO
+
+
+EXEC sys.sp_configure @configname = 'clr strict security', -- varchar(35)
+                      @configvalue = 0  -- int
+GO
+RECONFIGURE
+GO
 
 -- Create assembly
 CREATE ASSEMBLY MDDSQLCLR
-FROM 'D:\Temp\MDDSQLCLR.dll'
+FROM 'D:\SoftwareDeploy\MDDSQLCLR.dll'
 WITH PERMISSION_SET = SAFE;
 GO
 
