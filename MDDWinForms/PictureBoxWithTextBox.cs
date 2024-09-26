@@ -27,9 +27,15 @@ namespace MDDWinForms
             MDDForms.GetProcessDpiAwareness(hProcess, out DpiAwareness dpiAwareness);
 
             if (dpiAwareness == DpiAwareness.Unaware)
+            {
                 AppDefaultSize = new Size(250, 400);
+                AppDefaultSizeLandscape = new Size(400, 250);
+            }
             else
+            {
                 AppDefaultSize = new Size(600, 960);
+                AppDefaultSizeLandscape = new Size(960, 600);
+            }
 
             //This was in Program
             //AppDefaultSize = New Size(309 * 2, 492 * 2)
@@ -131,6 +137,7 @@ namespace MDDWinForms
             }
         }
         public static Size AppDefaultSize { get; set; }
+        public static Size AppDefaultSizeLandscape { get; set; }
         #endregion
 
 
