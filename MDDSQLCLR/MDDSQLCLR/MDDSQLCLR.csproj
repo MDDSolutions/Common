@@ -42,6 +42,7 @@
   <ItemGroup>
     <Compile Include="RegExFunctions.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="StringSimilarity.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="MDDSQLCLR.sql" />
