@@ -45,32 +45,35 @@
             | System.Windows.Forms.AnchorStyles.Right)));
             this.pbx.ContextMenuStrip = this.cms;
             this.pbx.Location = new System.Drawing.Point(0, 0);
+            this.pbx.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
             this.pbx.Name = "pbx";
-            this.pbx.Size = new System.Drawing.Size(206, 274);
+            this.pbx.Size = new System.Drawing.Size(309, 422);
+            this.pbx.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom;
             this.pbx.TabIndex = 0;
             this.pbx.TabStop = false;
             this.pbx.Click += new System.EventHandler(this.pbx_Click);
             // 
             // cms
             // 
+            this.cms.ImageScalingSize = new System.Drawing.Size(24, 24);
             this.cms.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.tsmCopyImage,
             this.tsmSelect});
             this.cms.Name = "cms";
-            this.cms.Size = new System.Drawing.Size(139, 48);
+            this.cms.Size = new System.Drawing.Size(182, 68);
             this.cms.Opening += new System.ComponentModel.CancelEventHandler(this.ContextMenuOpening);
             // 
             // tsmCopyImage
             // 
             this.tsmCopyImage.Name = "tsmCopyImage";
-            this.tsmCopyImage.Size = new System.Drawing.Size(138, 22);
+            this.tsmCopyImage.Size = new System.Drawing.Size(181, 32);
             this.tsmCopyImage.Text = "Copy Image";
             this.tsmCopyImage.Click += new System.EventHandler(this.CopyImage);
             // 
             // tsmSelect
             // 
             this.tsmSelect.Name = "tsmSelect";
-            this.tsmSelect.Size = new System.Drawing.Size(138, 22);
+            this.tsmSelect.Size = new System.Drawing.Size(181, 32);
             this.tsmSelect.Text = "Select";
             this.tsmSelect.Click += new System.EventHandler(this.tsmSelect_Click);
             // 
@@ -78,19 +81,21 @@
             // 
             this.txt.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.txt.Location = new System.Drawing.Point(0, 274);
+            this.txt.Location = new System.Drawing.Point(0, 422);
+            this.txt.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
             this.txt.Name = "txt";
-            this.txt.Size = new System.Drawing.Size(206, 20);
+            this.txt.Size = new System.Drawing.Size(307, 26);
             this.txt.TabIndex = 1;
             // 
             // PictureBoxWithTextBox
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
+            this.AutoScaleDimensions = new System.Drawing.SizeF(9F, 20F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.Controls.Add(this.txt);
             this.Controls.Add(this.pbx);
+            this.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
             this.Name = "PictureBoxWithTextBox";
-            this.Size = new System.Drawing.Size(206, 294);
+            this.Size = new System.Drawing.Size(309, 452);
             ((System.ComponentModel.ISupportInitialize)(this.pbx)).EndInit();
             this.cms.ResumeLayout(false);
             this.ResumeLayout(false);

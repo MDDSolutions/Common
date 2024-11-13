@@ -52,6 +52,12 @@ namespace FormsDataAccess
                 ConnStr = frm.ConnectionString;
             }
         }
+        public DataTable QueryResult { get; set; }
+        public string QueryText 
+        { 
+            get => txtQuery.Text;
+            set => txtQuery.Text = value; 
+        }
         public async Task ExecuteQuery()
         {
             try
@@ -60,11 +66,12 @@ namespace FormsDataAccess
                 {
                     await connection.OpenAsync();
 
+                    QueryResult = new DataTable();
+
                     using (SqlDataAdapter adapter = new SqlDataAdapter(txtQuery.Text, connection))
                     {
-                        DataSet dataSet = new DataSet();
-                        await Task.Run(() => adapter.Fill(dataSet)); // SqlDataAdapter.Fill is not natively async
-                        dgvResults.SynchronizedInvoke(() => dgvResults.DataSource = dataSet.Tables[0]);
+                        await Task.Run(() => adapter.Fill(QueryResult)); // SqlDataAdapter.Fill is not natively async
+                        dgvResults.SynchronizedInvoke(() => dgvResults.DataSource = QueryResult);
                     }
                 }
             }

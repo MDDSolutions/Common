@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Drawing;
+using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -586,6 +587,62 @@ namespace MDDWinForms
             f.Controls.Add(ctl);
             return f;
         }
+        public static Form ToDialogForm(this Control ctl, string title = null)
+        {
+            var form = new Form();
+            if (!string.IsNullOrWhiteSpace(title)) { form.Text = title; }
+            form.FormClosing += F_FormClosing;
+            form.Size = new Size(ctl.Width + 30, ctl.Height + 100);
+
+            var tableLayoutPanel = new TableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                ColumnCount = 1,
+                RowCount = 2,
+                Padding = new Padding(10)
+            };
+            tableLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+            tableLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 40F));
+
+            var panel = new Panel
+            {
+                Dock = DockStyle.Fill
+            };
+            ctl.Dock = DockStyle.Fill;
+            panel.Controls.Add(ctl);
+            tableLayoutPanel.Controls.Add(panel, 0, 0);
+
+            var buttonPanel = new FlowLayoutPanel
+            {
+                FlowDirection = FlowDirection.RightToLeft,
+                Dock = DockStyle.Fill
+            };
+
+            var btnCancel = new Button
+            {
+                Text = "Cancel",
+                DialogResult = DialogResult.Cancel,
+                Size = new Size(75, 23)
+            };
+            buttonPanel.Controls.Add(btnCancel);
+
+            var btnOk = new Button
+            {
+                Text = "OK",
+                DialogResult = DialogResult.OK,
+                Size = new Size(75, 23)
+            };
+            buttonPanel.Controls.Add(btnOk);
+
+            tableLayoutPanel.Controls.Add(buttonPanel, 0, 1);
+
+            form.Controls.Add(tableLayoutPanel);
+            form.AcceptButton = btnOk;
+            form.CancelButton = btnCancel;
+
+            return form;
+        }
+
 
         private static void F_FormClosing(object sender, FormClosingEventArgs e)
         {
@@ -619,6 +676,7 @@ namespace MDDWinForms
         {
             grid.Columns.Clear();
             grid.AutoGenerateColumns = false;
+            if (sample != null)
             foreach (var item in sample.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance))
             {
                 var col = new DataGridViewTextBoxColumn();
@@ -632,7 +690,7 @@ namespace MDDWinForms
         [DllImport("SHCore.dll", SetLastError = true)]
         public static extern IntPtr GetProcessDpiAwareness(IntPtr hprocess, out DpiAwareness value);
 
-        public static byte[] ToByteArray(this System.Drawing.Image imageIn)
+        public static byte[] ToByteArray(this Image imageIn)
         {
             //using (var ms = new MemoryStream())
             //{
@@ -642,6 +700,14 @@ namespace MDDWinForms
             var ic = new ImageConverter();
             byte[] bytes = (byte[])ic.ConvertTo(imageIn, typeof(byte[]));
             return bytes;
+        }
+        public static byte[] ToByteArray(this Image imageIn, ImageFormat format)
+        {
+            using (var ms = new MemoryStream())
+            {
+                imageIn.Save(ms, format);
+                return ms.ToArray();
+            }
         }
     }
     public enum DpiAwareness
