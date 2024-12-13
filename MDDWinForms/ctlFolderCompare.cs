@@ -299,21 +299,46 @@ namespace MDDWinForms
         private List<ComparisonResult> contextitems;
         private void dgvResult_CellContextMenuStripNeeded(object sender, DataGridViewCellContextMenuStripNeededEventArgs e)
         {
-            if (dgvResult.SelectedRows.Count > 0 && dgvResult.Rows[e.RowIndex].Selected)
-                contextitems = dgvResult.SelectedRows.OfType<DataGridViewRow>().Select(x => x.DataBoundItem as ComparisonResult).ToList();
-            else
+            if (e.RowIndex >= 0)
             {
-                contextitems = new List<ComparisonResult> { dgvResult.Rows[e.RowIndex].DataBoundItem as ComparisonResult };
-            }
-            if (contextitems != null && contextitems.Count > 0)
-            {
-                var cms = new ContextMenuStrip();
-                cms.Items.Add(new ToolStripMenuItem("Compare Hashes", null, async (s, eh) => await CompareHashes()));
-                cms.Items.Add(new ToolStripMenuItem("Copy 1 -> 2", null, async (s, eh) => await CopyFiles(1)));
-                cms.Items.Add(new ToolStripMenuItem("Copy 2 -> 1", null, async (s, eh) => await CopyFiles(2)));
-                e.ContextMenuStrip = cms;
+                if (dgvResult.SelectedRows.Count > 0 && dgvResult.Rows[e.RowIndex].Selected)
+                    contextitems = dgvResult.SelectedRows.OfType<DataGridViewRow>().Select(x => x.DataBoundItem as ComparisonResult).ToList();
+                else
+                {
+                    contextitems = new List<ComparisonResult> { dgvResult.Rows[e.RowIndex].DataBoundItem as ComparisonResult };
+                }
+                if (contextitems != null && contextitems.Count > 0)
+                {
+                    var cms = new ContextMenuStrip();
+                    cms.Items.Add(new ToolStripMenuItem("Compare Hashes", null, async (s, eh) => await CompareHashes()));
+                    cms.Items.Add(new ToolStripMenuItem("Copy 1 -> 2", null, async (s, eh) => await CopyFiles(1)));
+                    cms.Items.Add(new ToolStripMenuItem("Copy 2 -> 1", null, async (s, eh) => await CopyFiles(2)));
+                    cms.Items.Add(new ToolStripMenuItem("Delete 1", null, (s, eh) => DeleteFiles(1)));
+                    cms.Items.Add(new ToolStripMenuItem("Delete 2", null, (s, eh) => DeleteFiles(2)));
+                    e.ContextMenuStrip = cms;
+                }
             }
         }
+
+        private void DeleteFiles(int sourcefolderindex)
+        {
+            var list = contextitems.ToList();
+            var sb = new StringBuilder();
+            foreach (var item in list)
+            {
+                if (sourcefolderindex == 1 && item.File1 != null)
+                {
+                    sb.AppendLine($@"del ""{item.File1.FileInfo.FullName}""");
+                }
+                if (sourcefolderindex == 2 && item.File2 != null)
+                {
+                    sb.AppendLine($@"del ""{item.File2.FileInfo.FullName}""");
+                }
+            }
+            sb.AppendLine("PAUSE");
+            Clipboard.SetText(sb.ToString());
+        }
+
         private async Task CopyFiles(int sourcefolderindex)
         {
             var list = contextitems.ToList();
