@@ -120,6 +120,7 @@
     <Compile Include="frmKeyMouse.Designer.cs">
       <DependentUpon>frmKeyMouse.cs</DependentUpon>
     </Compile>
+    <Compile Include="MouseStatus.cs" />
     <Compile Include="PictureBoxWithTextBox.cs">
       <SubType>UserControl</SubType>
     </Compile>
