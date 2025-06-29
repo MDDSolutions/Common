@@ -6,8 +6,6 @@ using System.Runtime.InteropServices.ComTypes;
 
 namespace MDDWinForms
 {
-
-
     public class FolderPicker
     {
         public virtual string ResultPath { get; protected set; }
