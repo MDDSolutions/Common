@@ -585,6 +585,18 @@ namespace MDDWinForms
             f.Size = new Size(ctl.Width + 10, ctl.Height + 50);
             ctl.Dock = DockStyle.Fill;
             f.Controls.Add(ctl);
+
+            // Reflection: Check for public property "OKButton" of type Button
+            var okButtonProp = ctl.GetType().GetProperty("OKButton", BindingFlags.Public | BindingFlags.Instance);
+            if (okButtonProp != null)
+            {
+                var okButton = okButtonProp.GetValue(ctl) as Button;
+                if (okButton != null)
+                {
+                    f.AcceptButton = okButton;
+                }
+            }
+
             return f;
         }
         public static Form ToDialogForm(this Control ctl, string title = null)
