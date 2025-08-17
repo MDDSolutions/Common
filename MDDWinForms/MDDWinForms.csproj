@@ -52,6 +52,12 @@
     <Compile Include="ContextMenuStripWithType.cs">
       <SubType>Component</SubType>
     </Compile>
+    <Compile Include="ControlForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="ControlForm.Designer.cs">
+      <DependentUpon>ControlForm.cs</DependentUpon>
+    </Compile>
     <Compile Include="ControlWithCmdKey.cs">
       <SubType>UserControl</SubType>
     </Compile>
@@ -69,6 +75,12 @@
     </Compile>
     <Compile Include="ctlTimeRange.cs">
       <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="ctlWorkspaceManager.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="ctlWorkspaceManager.Designer.cs">
+      <DependentUpon>ctlWorkspaceManager.cs</DependentUpon>
     </Compile>
     <Compile Include="DataGridViewRowUpdate.cs">
       <SubType>Component</SubType>
@@ -137,6 +149,7 @@
     <Compile Include="ToolStripMenuItemWithContext.cs">
       <SubType>Component</SubType>
     </Compile>
+    <Compile Include="WorkspaceManager.cs" />
     <Service Include="{94E38DFF-614B-4cbd-B67C-F211BB35CE8B}" />
   </ItemGroup>
   <ItemGroup>
@@ -145,6 +158,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="ctlFolderCompare.resx">
       <DependentUpon>ctlFolderCompare.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="ctlWorkspaceManager.resx">
+      <DependentUpon>ctlWorkspaceManager.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="frmBasicProgress.resx">
       <DependentUpon>frmBasicProgress.cs</DependentUpon>
@@ -173,6 +189,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Properties\DataSources\ComparisonResult.datasource" />
+    <None Include="Properties\DataSources\WindowState.datasource" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\Standard\MDDFoundation\MDDFoundation.csproj">

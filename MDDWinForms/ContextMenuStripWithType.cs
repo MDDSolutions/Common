@@ -106,7 +106,7 @@ namespace MDDWinForms
             }
             ContextActionTaken?.Invoke(tsm, CurrentObject);
         }
-        public Action RefreshAction { get; set; }
+        public Func<Task> RefreshAction { get; set; }
 
         public event EventHandler tmsRefreshClicked;
         public Action<object,T> ContextActionTaken;

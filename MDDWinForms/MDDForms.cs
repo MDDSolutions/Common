@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
@@ -10,6 +11,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using MDDFoundation;
 
 namespace MDDWinForms
 {
@@ -579,23 +581,23 @@ namespace MDDWinForms
         }
         public static Form ToForm(this Control ctl, string title = null)
         {
-            var f = new Form();
-            if (!string.IsNullOrWhiteSpace(title)) { f.Text = title; }
-            f.FormClosing += F_FormClosing;
-            f.Size = new Size(ctl.Width + 10, ctl.Height + 50);
-            ctl.Dock = DockStyle.Fill;
-            f.Controls.Add(ctl);
+            var f = new ControlForm(ctl,title);
+            //if (!string.IsNullOrWhiteSpace(title)) { f.Text = title; }
+            //f.FormClosing += F_FormClosing;
+            //f.Size = new Size(ctl.Width + 10, ctl.Height + 50);
+            //ctl.Dock = DockStyle.Fill;
+            //f.Controls.Add(ctl);
 
             // Reflection: Check for public property "OKButton" of type Button
-            var okButtonProp = ctl.GetType().GetProperty("OKButton", BindingFlags.Public | BindingFlags.Instance);
-            if (okButtonProp != null)
-            {
-                var okButton = okButtonProp.GetValue(ctl) as Button;
-                if (okButton != null)
-                {
-                    f.AcceptButton = okButton;
-                }
-            }
+            //var okButtonProp = ctl.GetType().GetProperty("OKButton", BindingFlags.Public | BindingFlags.Instance);
+            //if (okButtonProp != null)
+            //{
+            //    var okButton = okButtonProp.GetValue(ctl) as Button;
+            //    if (okButton != null)
+            //    {
+            //        f.AcceptButton = okButton;
+            //    }
+            //}
 
             return f;
         }
@@ -653,6 +655,36 @@ namespace MDDWinForms
             form.CancelButton = btnCancel;
 
             return form;
+        }
+
+        private static void SetWaitCursor(Control control, bool useWait)
+        {
+            control.Cursor = useWait ? Cursors.WaitCursor : Cursors.Default;
+            //if (Debugger.IsAttached) Console.WriteLine($"MDDForms.SetWaitCursor: {control.Name}");
+            foreach (Control child in control.Controls)
+            {
+                SetWaitCursor(child, useWait);
+            }
+        }
+        public static Form SetWaitCursor(this Control ctl)
+        {
+            return ctl.SynchronizedInvoke(() =>
+            {
+                var form = ctl.FindForm();
+                if (form == null) return null;
+
+                if (form.Cursor != Cursors.WaitCursor)
+                {
+                    SetWaitCursor(form, true);
+                    return form;
+                }
+
+                return null;
+            });
+        }
+        public static void ResetWaitCursor(this Form form)
+        {
+            form.SynchronizedInvoke(() => SetWaitCursor(form, false));
         }
 
 
