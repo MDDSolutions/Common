@@ -707,6 +707,14 @@ namespace MDDWinForms
             else
                 return f;
         }
+        public static T GetInstance<T>() where T : Form, new()
+        {
+            var f = Application.OpenForms.OfType<T>().FirstOrDefault();
+            if (f == null || f.IsDisposed)
+                return new T();
+            else
+                return f;
+        }
         public static Form GetInstance(this Form frm, Form OtherThan = null)
         {
             foreach (Form lfrm in Application.OpenForms)

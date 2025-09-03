@@ -143,6 +143,9 @@
     <Compile Include="RadioButtonGroup.cs">
       <SubType>Component</SubType>
     </Compile>
+    <Compile Include="TextBoxSearch.cs">
+      <SubType>Component</SubType>
+    </Compile>
     <Compile Include="TextBoxWithObject.cs">
       <SubType>Component</SubType>
     </Compile>

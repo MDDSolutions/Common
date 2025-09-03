@@ -89,7 +89,7 @@ namespace MDDWinForms
                     {
                         workspaceWindow.ApplyWorkspaceState(windowState.WorkspaceState);
                     }
-                    form.Show();
+                    form.ShowInstance();
                 }
             }
         }        

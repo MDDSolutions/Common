@@ -85,18 +85,38 @@ namespace MDDWinForms
             if (OwnerForm == null && this.SourceControl.TopLevelControl is Form)
                 OwnerForm = (Form)this.SourceControl.TopLevelControl;
             if (!Initialized) Initialize();
+
+            foreach (var handler in HandlerBase<T>.Instances)
+            {
+                var item = Items.OfType<ToolStripMenuItemWithContext<HandlerBase<T>>>().Where(x => x.ContextObject == handler).FirstOrDefault();
+                if (item == null)
+                {
+                    if (handler.IsActive && handler.ValidFor(CurrentObject))
+                    {
+                        item = new ToolStripMenuItemWithContext<HandlerBase<T>>(handler.HandlerCaption, async (s, e2) =>
+                        {
+                            var tsm = (ToolStripMenuItemWithContext<HandlerBase<T>>)s;
+                            await tsm.ContextObject.HandleAsync(CurrentObject);
+                        }, handler);
+                        Items.Add(item);                        
+                    }
+                }
+                else
+                {
+                    if (!handler.IsActive || !handler.ValidFor(CurrentObject))
+                        Items.Remove(item);
+                }
+            }
         }
         public virtual async void Details_Click(object sender, EventArgs e)
         {
             var tsm = (ToolStripMenuItemWithContext<ILoader<T>>)sender;
             if (tsm.ContextObject == null)
             {
-                var c = LoaderType.GetConstructor(new Type[] { });
-                var frm = c.Invoke(new object[] { });
-                (frm as Form).ShowInstance();
-                await (frm as ILoader<T>).LoadItemAsync(CurrentObject);
-                (frm as ILoader<T>).ReferencingObject = OwnerForm;
-                DetailsClicked?.Invoke((frm as ILoader<T>));
+                var frm = NewDetailForm();
+                await frm.LoadItemAsync(CurrentObject);
+                frm.ReferencingObject = OwnerForm;
+                DetailsClicked?.Invoke(frm);
             }
             else
             {
@@ -106,6 +126,15 @@ namespace MDDWinForms
             }
             ContextActionTaken?.Invoke(tsm, CurrentObject);
         }
+
+        public static ILoader<T> NewDetailForm()
+        {
+            var c = LoaderType.GetConstructor(new Type[] { });
+            var frm = c.Invoke(new object[] { }) as ILoader<T>;
+            (frm as Form).ShowInstance();
+            return frm;
+        }
+
         public Func<Task> RefreshAction { get; set; }
 
         public event EventHandler tmsRefreshClicked;
