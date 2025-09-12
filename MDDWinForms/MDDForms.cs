@@ -59,9 +59,41 @@ namespace MDDWinForms
             using (Graphics graphicsHandle = Graphics.FromImage(newImage))
             {
                 graphicsHandle.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
-                graphicsHandle.DrawImage(image,0,0,newWidth, newHeight);
+                graphicsHandle.DrawImage(image, 0, 0, newWidth, newHeight);
             }
             return newImage;
+        }
+        public static void ResizeImage(ref Image image, Size size, bool preserveAspectRatio = true)
+        {
+            if (image == null)
+                throw new ArgumentNullException(nameof(image));
+
+            int newWidth, newHeight;
+            if (preserveAspectRatio)
+            {
+                int originalWidth = image.Width;
+                int originalHeight = image.Height;
+                float percentWidth = (float)size.Width / originalWidth;
+                float percentHeight = (float)size.Height / originalHeight;
+                float percent = Math.Min(percentWidth, percentHeight);
+                newWidth = (int)(originalWidth * percent);
+                newHeight = (int)(originalHeight * percent);
+            }
+            else
+            {
+                newWidth = size.Width;
+                newHeight = size.Height;
+            }
+
+            Image newImage = new Bitmap(newWidth, newHeight);
+            using (Graphics graphicsHandle = Graphics.FromImage(newImage))
+            {
+                graphicsHandle.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+                graphicsHandle.DrawImage(image, 0, 0, newWidth, newHeight);
+            }
+
+            image.Dispose(); // Dispose the old image
+            image = newImage; // Replace with the new image
         }
         public static string InstanceQualifier { get; set; }
 

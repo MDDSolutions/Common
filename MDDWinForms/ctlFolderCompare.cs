@@ -390,6 +390,7 @@ namespace MDDWinForms
                     });
                     tasks.Remove(tp);
                 }
+                await Task.Delay(10).ConfigureAwait(false);
             }
 
 
@@ -662,12 +663,38 @@ namespace MDDWinForms
         public byte[] Hash { get; set; }
         public static FCFileInfo FromFileInfo(FileInfo fi)
         {
+            DateTime lastWrite = fi.LastWriteTime;
+            if (lastWrite.Millisecond != 0 && ((fi.Attributes & FileAttributes.ReadOnly) == 0))
+            {
+                // Truncate milliseconds
+                DateTime truncated = new DateTime(
+                    lastWrite.Year, lastWrite.Month, lastWrite.Day,
+                    lastWrite.Hour, lastWrite.Minute, lastWrite.Second,
+                    0, lastWrite.Kind);
+
+                // Write back to file
+                System.IO.File.SetLastWriteTime(fi.FullName, truncated);
+                lastWrite = truncated;
+
+                if (fi.CreationTime.Millisecond != 0)
+                {
+                    DateTime created = fi.CreationTime;
+                    DateTime truncatedCreated = new DateTime(
+                        created.Year, created.Month, created.Day,
+                        created.Hour, created.Minute, created.Second,
+                        0, created.Kind);
+                    System.IO.File.SetCreationTime(fi.FullName, truncatedCreated);
+                }
+            }
+
+
+
             return new FCFileInfo
             {
                 Name = fi.Name,
                 Directory = fi.DirectoryName,
                 Length = fi.Length,
-                LastWriteTime = fi.LastWriteTime
+                LastWriteTime = lastWrite
             };
         }
     }

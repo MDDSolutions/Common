@@ -52,6 +52,7 @@ namespace MDDWinForms
             highlightcolor = Color.Yellow;
             showtextbox = true;
             sizetoimage = true;
+            pbx.Image?.Dispose();
             pbx.Image = null;
             txt.Text = null;
             selected = false;
@@ -152,11 +153,11 @@ namespace MDDWinForms
                 refreshall(pbx.Size);
                 if (img.Size.Width > pbx.Size.Width || img.Size.Height > pbx.Size.Height)
                 {
-                    img = MDDForms.ResizeImage(img, pbx.Size);
+                    MDDForms.ResizeImage(ref img, pbx.Size);
                 }
                 if (img.Size.Width < AppDefaultSize.Width * 0.9 && img.Size.Height < AppDefaultSize.Height * 0.9)
                 {
-                    img = MDDForms.ResizeImage(img, AppDefaultSize);
+                    MDDForms.ResizeImage(ref img, AppDefaultSize);
                 }
                 if (img.Size.Width < pbx.Size.Width || img.Size.Height < pbx.Size.Height)
                 {

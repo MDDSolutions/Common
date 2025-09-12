@@ -119,6 +119,7 @@
     <Compile Include="frmSearchReplace.Designer.cs">
       <DependentUpon>frmSearchReplace.cs</DependentUpon>
     </Compile>
+    <Compile Include="IFormProvider.cs" />
     <Compile Include="MDDForms.cs" />
     <Compile Include="frmBasicProgress.cs">
       <SubType>Form</SubType>
