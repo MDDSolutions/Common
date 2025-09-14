@@ -27,7 +27,31 @@ namespace MDDWinForms
         private void InitializeForm(Control ctl, string title)
         {
             Name = $"ControlForm:{ctl.Name}";
-            if (!string.IsNullOrWhiteSpace(title)) Text = title;
+            
+            string displayText = null;
+            if (ctl is IControlForm icf)
+            {
+                displayText = icf.DisplayText;
+                icf.DisplayTextChanged += (s, e) => 
+                {
+                    if (!string.IsNullOrWhiteSpace(MDDForms.InstanceQualifier))
+                        Text = $"{MDDForms.InstanceQualifier} {e}";
+                    else
+                        Text = e;
+                };
+            }
+            else
+            {
+                if (!string.IsNullOrWhiteSpace(title)) 
+                    displayText = title;
+                else
+                    displayText = ctl.Name;
+            }
+            if (!string.IsNullOrWhiteSpace(MDDForms.InstanceQualifier)) 
+                Text = $"{MDDForms.InstanceQualifier} {displayText}";
+            else
+                Text = displayText;
+
             Size = new Size(ctl.Width + 10, ctl.Height + 50);
             ctl.Dock = DockStyle.Fill;
             Controls.Add(ctl);
@@ -89,5 +113,10 @@ namespace MDDWinForms
         {
             return $"{Text}|{ContainedControlTypeName}|{ContainedAssemblyName}";
         }
+    }
+    public interface IControlForm
+    {
+        event EventHandler<string> DisplayTextChanged;
+        string DisplayText { get; }
     }
 }
