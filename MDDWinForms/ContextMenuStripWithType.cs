@@ -97,6 +97,7 @@ namespace MDDWinForms
                         {
                             var tsm = (ToolStripMenuItemWithContext<HandlerBase<T>>)s;
                             await tsm.ContextObject.HandleAsync(CurrentObject);
+                            DetailsClicked?.Invoke(handler);
                         }, handler);
                         Items.Add(item);                        
                     }

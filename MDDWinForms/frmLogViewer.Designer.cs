@@ -159,6 +159,7 @@
             // bsEntries
             // 
             this.bsEntries.DataSource = typeof(MDDFoundation.RichLogEntry);
+            this.bsEntries.CurrentChanged += new System.EventHandler(this.bsEntries_CurrentChanged);
             // 
             // dgvEntries
             // 

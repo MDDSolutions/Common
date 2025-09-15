@@ -12,6 +12,7 @@ namespace MDDWinForms
         private RichLog _currentLog;
         private EventHandler<RichLogEntry> _currentHandler;
         private BindingList<RichLogEntry> _displayedEntries = new BindingList<RichLogEntry>();
+        private int addedEntriesCount = 0;
 
         public frmLogViewer()
         {
@@ -87,7 +88,8 @@ namespace MDDWinForms
         }
         private void AddEntryToGrid(RichLogEntry entry)
         {
-            _displayedEntries.Add(entry);
+            addedEntriesCount++;
+            this.SynchronizedInvoke(() => _displayedEntries.Add(entry));
             //dgvEntries.Rows.Add(
             //    entry.Timestamp,
             //    entry.Severity.ToString(),
@@ -107,17 +109,7 @@ namespace MDDWinForms
             if (_currentHandler != null)
                 _currentLog.Unsubscribe(_currentHandler);
 
-            _currentHandler = (s, entry) =>
-            {
-                if (InvokeRequired)
-                {
-                    BeginInvoke(new Action(() => AddEntryToGrid(entry)));
-                }
-                else
-                {
-                    AddEntryToGrid(entry);
-                }
-            };
+            _currentHandler = (s, entry) => AddEntryToGrid(entry);
 
             txtStatus.Text = "Filter Active";
             btnApplyFilter.Enabled = false;
@@ -173,13 +165,28 @@ namespace MDDWinForms
                 e.Cancel = true;
             }
         }
-
+        private frmLogDetailViewer _detailViewer = null;
         private void dgvEntries_CellDoubleClick(object sender, DataGridViewCellEventArgs e)
         {
             if (e.RowIndex >= 0)
             {
                 var detailsForm = new frmLogDetailViewer(_displayedEntries, e.RowIndex);
                 detailsForm.ShowInstance();
+                if (_detailViewer != null)
+                    _detailViewer.ParentLogViewer = null;
+                _detailViewer = detailsForm;
+                _detailViewer.ParentLogViewer = this;
+            }
+        }
+        private void bsEntries_CurrentChanged(object sender, EventArgs e)
+        {
+            _detailViewer?.GoTo(bsEntries.Position);
+        }
+        public void GoTo(int newIndex)
+        {
+            if (bsEntries.Position != newIndex)
+            {
+                bsEntries.Position = newIndex;
             }
         }
     }
