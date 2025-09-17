@@ -17,6 +17,7 @@
             {
                 components.Dispose();
             }
+            Reset();
             base.Dispose(disposing);
         }
 

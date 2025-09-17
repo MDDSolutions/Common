@@ -130,10 +130,14 @@ namespace MDDWinForms
 
         public static ILoader<T> NewDetailForm()
         {
+            var currenthandlers = HandlerBase<T>.Instances.ToList();
             var c = LoaderType.GetConstructor(new Type[] { });
-            var frm = c.Invoke(new object[] { }) as ILoader<T>;
-            (frm as Form).ShowInstance();
-            return frm;
+            var frm = c.Invoke(new object[] { }) as Form;
+            frm.ShowInstance();
+            if (frm is ILoader<T> ilt)
+                return ilt;
+            var newhandler = HandlerBase<T>.Instances.Except(currenthandlers).FirstOrDefault();
+            return newhandler as ILoader<T>;
         }
 
         public Func<Task> RefreshAction { get; set; }

@@ -164,7 +164,17 @@ namespace MDDWinForms
                     refreshall(img.Size);
                 }
             }
+            pbx.Image?.Dispose();
             pbx.Image = img;
+        }
+        public void SetImage(byte[] ImageData, bool withresize = true)
+        {
+            if (ImageData == null) throw new ArgumentNullException("PictureBoxWithTextBox - image data is null");
+            using (var ms = new System.IO.MemoryStream(ImageData))
+            {
+                var img = Image.FromStream(ms);
+                SetImage(img, withresize);
+            }
         }
         public void SetText(string text, bool strict = true)
         {
@@ -180,20 +190,21 @@ namespace MDDWinForms
         }
         public virtual void ContextMenuOpening(object sender, CancelEventArgs e)
         {
-            //no default implementation - this is just to make it overridable
+            if (GetMenuItems != null) cms.Items.AddRange(GetMenuItems.Invoke());
         }
         #endregion
 
         #region Public Events
         public event EventHandler SelectionChanged;
         public event EventHandler PictureBoxClicked;
+        public Func<ToolStripMenuItem[]> GetMenuItems { get; set; } = null;
         #endregion
 
 
         #region Private methods and Event Handlers
         private void refreshall(Size imgsize = default)
         {
-            if (sizetoimage)
+            if (sizetoimage && pbx.Image != null)
             {
                 if (imgsize == default) imgsize = pbx.Image.Size;
                 Size = new Size(imgsize.Width + highlighthickness * 2, imgsize.Height + highlighthickness * 2 + (showtextbox ? txt.Height : 0));

@@ -31,70 +31,6 @@ namespace MDDWinForms
     }
     public static class MDDForms
     {
-        public static Image ResizeImage(Image image, Size size, bool preserveAspectRatio = true)
-        {
-            int newWidth;
-            int newHeight;
-            if (preserveAspectRatio)
-            {
-                int originalWidth = image.Width;
-                int originalHeight = image.Height;
-                float percentWidth = Convert.ToSingle(size.Width) / Convert.ToSingle(originalWidth);
-                float percentHeight = Convert.ToSingle(size.Height) / Convert.ToSingle(originalHeight);
-                float percent;
-                if (percentHeight < percentWidth)
-                    percent = percentHeight;
-                else
-                    percent = percentWidth;
-                newWidth = Convert.ToInt32(originalWidth * percent);
-                newHeight = Convert.ToInt32(originalHeight * percent);
-            }
-            else
-            {
-                newWidth = size.Width;
-                newHeight = size.Height;
-            }
-
-            Image newImage = new Bitmap(newWidth, newHeight);
-            using (Graphics graphicsHandle = Graphics.FromImage(newImage))
-            {
-                graphicsHandle.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
-                graphicsHandle.DrawImage(image, 0, 0, newWidth, newHeight);
-            }
-            return newImage;
-        }
-        public static void ResizeImage(ref Image image, Size size, bool preserveAspectRatio = true)
-        {
-            if (image == null)
-                throw new ArgumentNullException(nameof(image));
-
-            int newWidth, newHeight;
-            if (preserveAspectRatio)
-            {
-                int originalWidth = image.Width;
-                int originalHeight = image.Height;
-                float percentWidth = (float)size.Width / originalWidth;
-                float percentHeight = (float)size.Height / originalHeight;
-                float percent = Math.Min(percentWidth, percentHeight);
-                newWidth = (int)(originalWidth * percent);
-                newHeight = (int)(originalHeight * percent);
-            }
-            else
-            {
-                newWidth = size.Width;
-                newHeight = size.Height;
-            }
-
-            Image newImage = new Bitmap(newWidth, newHeight);
-            using (Graphics graphicsHandle = Graphics.FromImage(newImage))
-            {
-                graphicsHandle.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
-                graphicsHandle.DrawImage(image, 0, 0, newWidth, newHeight);
-            }
-
-            image.Dispose(); // Dispose the old image
-            image = newImage; // Replace with the new image
-        }
         public static string InstanceQualifier { get; set; }
 
         private static readonly MethodInfo onValidating = typeof(Control).GetMethod("OnValidating", BindingFlags.Instance | BindingFlags.NonPublic);
@@ -774,6 +710,72 @@ namespace MDDWinForms
         [DllImport("SHCore.dll", SetLastError = true)]
         public static extern IntPtr GetProcessDpiAwareness(IntPtr hprocess, out DpiAwareness value);
 
+
+
+        public static Image ResizeImage(Image image, Size size, bool preserveAspectRatio = true)
+        {
+            int newWidth;
+            int newHeight;
+            if (preserveAspectRatio)
+            {
+                int originalWidth = image.Width;
+                int originalHeight = image.Height;
+                float percentWidth = Convert.ToSingle(size.Width) / Convert.ToSingle(originalWidth);
+                float percentHeight = Convert.ToSingle(size.Height) / Convert.ToSingle(originalHeight);
+                float percent;
+                if (percentHeight < percentWidth)
+                    percent = percentHeight;
+                else
+                    percent = percentWidth;
+                newWidth = Convert.ToInt32(originalWidth * percent);
+                newHeight = Convert.ToInt32(originalHeight * percent);
+            }
+            else
+            {
+                newWidth = size.Width;
+                newHeight = size.Height;
+            }
+
+            Image newImage = new Bitmap(newWidth, newHeight);
+            using (Graphics graphicsHandle = Graphics.FromImage(newImage))
+            {
+                graphicsHandle.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+                graphicsHandle.DrawImage(image, 0, 0, newWidth, newHeight);
+            }
+            return newImage;
+        }
+        public static void ResizeImage(ref Image image, Size size, bool preserveAspectRatio = true)
+        {
+            if (image == null)
+                throw new ArgumentNullException(nameof(image));
+
+            int newWidth, newHeight;
+            if (preserveAspectRatio)
+            {
+                int originalWidth = image.Width;
+                int originalHeight = image.Height;
+                float percentWidth = (float)size.Width / originalWidth;
+                float percentHeight = (float)size.Height / originalHeight;
+                float percent = Math.Min(percentWidth, percentHeight);
+                newWidth = (int)(originalWidth * percent);
+                newHeight = (int)(originalHeight * percent);
+            }
+            else
+            {
+                newWidth = size.Width;
+                newHeight = size.Height;
+            }
+
+            Image newImage = new Bitmap(newWidth, newHeight);
+            using (Graphics graphicsHandle = Graphics.FromImage(newImage))
+            {
+                graphicsHandle.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+                graphicsHandle.DrawImage(image, 0, 0, newWidth, newHeight);
+            }
+
+            image.Dispose(); // Dispose the old image
+            image = newImage; // Replace with the new image
+        }
         public static byte[] ToByteArray(this Image imageIn)
         {
             //using (var ms = new MemoryStream())
@@ -791,6 +793,15 @@ namespace MDDWinForms
             {
                 imageIn.Save(ms, format);
                 return ms.ToArray();
+            }
+        }
+        public static Image ByteArrayToImage(byte[] byteArrayIn)
+        {
+            if (byteArrayIn == null) return null;
+            using (var ms = new MemoryStream(byteArrayIn))
+            {
+                Image returnImage = Image.FromStream(ms);
+                return returnImage;
             }
         }
     }
