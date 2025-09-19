@@ -19,6 +19,7 @@ namespace MDDWinForms
         }
         string ContainedControlTypeName;
         string ContainedAssemblyName;
+        public Control ContainedControl { get; private set; }
         public ControlForm(Control ctl, string title = null) : this()
         {
             InitializeForm(ctl, title);
@@ -26,6 +27,8 @@ namespace MDDWinForms
 
         private void InitializeForm(Control ctl, string title)
         {
+            ContainedControl = ctl;
+
             Name = $"ControlForm:{ctl.Name}";
             
             string displayText = null;

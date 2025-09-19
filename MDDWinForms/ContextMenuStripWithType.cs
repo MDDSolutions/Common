@@ -137,7 +137,7 @@ namespace MDDWinForms
             if (frm is ILoader<T> ilt)
                 return ilt;
             var newhandler = HandlerBase<T>.Instances.Except(currenthandlers).FirstOrDefault();
-            return newhandler as ILoader<T>;
+            return newhandler;
         }
 
         public Func<Task> RefreshAction { get; set; }

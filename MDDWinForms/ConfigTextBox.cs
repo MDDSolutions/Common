@@ -22,6 +22,13 @@ namespace MDDWinForms
             base.OnCreateControl();
             if (!DesignMode)
             {
+                //if (ConfigProperty == null)
+                //{
+                //    var txt = this.Name;
+                //    if (txt.StartsWith("txt"))
+                //        txt = txt.Substring(3);
+                //    ConfigProperty = txt;
+                //}
                 var obj = ConfigControl.PropertyGetValue(ConfigProperty ?? this.Name);
                 if (obj != null)
                 {
