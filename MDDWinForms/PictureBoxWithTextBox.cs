@@ -207,8 +207,12 @@ namespace MDDWinForms
             if (sizetoimage && pbx.Image != null)
             {
                 if (imgsize == default) imgsize = pbx.Image.Size;
-                Size = new Size(imgsize.Width + highlighthickness * 2, imgsize.Height + highlighthickness * 2 + (showtextbox ? txt.Height : 0));
             }
+            else if (imgsize == default)
+            {
+                imgsize = AppDefaultSize;
+            }
+            Size = new Size(imgsize.Width + highlighthickness * 2, imgsize.Height + highlighthickness * 2 + (showtextbox ? txt.Height : 0));
             var us = UsableSurface;
             pbx.Location = us.Location;
             pbx.Width = us.Width;
