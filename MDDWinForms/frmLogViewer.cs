@@ -189,5 +189,56 @@ namespace MDDWinForms
                 bsEntries.Position = newIndex;
             }
         }
+
+        private void btnTree_Click(object sender, EventArgs evnt)
+        {
+            var allentries = _currentLog.Query().ToList();
+
+            // Group by Source, then by Severity, then by Message
+            var sourceGroups = allentries
+                .GroupBy(entry => entry.Source)
+                .OrderBy(g => g.Key);
+
+            var ctltree = new TreeView
+            {
+                Dock = DockStyle.Fill,
+                Width = 600,
+                Height = 800
+            };
+
+            foreach (var sourceGroup in sourceGroups)
+            {
+                var sourceNode = new TreeNode($"{sourceGroup.Key} ({sourceGroup.Count()})");
+                var severityGroups = sourceGroup
+                    .GroupBy(e => e.Severity)
+                    .OrderBy(g => g.Key);
+
+                foreach (var severityGroup in severityGroups)
+                {
+                    var severityNode = new TreeNode($"Severity {severityGroup.Key} ({severityGroup.Count()})");
+
+                    // Group by Message under Severity
+                    var messageGroups = severityGroup
+                        .GroupBy(e => e.Message)
+                        .OrderBy(g => g.Key);
+
+                    foreach (var messageGroup in messageGroups)
+                    {
+                        // Show the first 80 chars of the message, or the whole message if shorter
+                        var msgPreview = messageGroup.Key?.Length > 80
+                            ? messageGroup.Key.Substring(0, 80) + "..."
+                            : messageGroup.Key;
+                        var messageNode = new TreeNode($"{msgPreview} ({messageGroup.Count()})");
+                        severityNode.Nodes.Add(messageNode);
+                    }
+
+                    sourceNode.Nodes.Add(severityNode);
+                }
+
+                ctltree.Nodes.Add(sourceNode);
+            }
+            var frm = new ControlForm(ctltree, "Log Entry Summary");
+            frm.ShowInstance();
+        }
     }
 }

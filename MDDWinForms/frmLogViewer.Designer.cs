@@ -43,6 +43,7 @@
             this.dataGridViewTextBoxColumn5 = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.dataGridViewTextBoxColumn6 = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.dataGridViewTextBoxColumn7 = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.btnTree = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.bsEntries)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.dgvEntries)).BeginInit();
             this.SuspendLayout();
@@ -53,7 +54,7 @@
             this.cboLogs.FormattingEnabled = true;
             this.cboLogs.Location = new System.Drawing.Point(12, 12);
             this.cboLogs.Name = "cboLogs";
-            this.cboLogs.Size = new System.Drawing.Size(200, 28);
+            this.cboLogs.Size = new System.Drawing.Size(200, 21);
             this.cboLogs.TabIndex = 0;
             this.cboLogs.SelectedIndexChanged += new System.EventHandler(this.cboLogs_SelectedIndexChanged);
             // 
@@ -72,7 +73,7 @@
             this.txtStatus.BackColor = System.Drawing.SystemColors.Control;
             this.txtStatus.Location = new System.Drawing.Point(1083, 10);
             this.txtStatus.Name = "txtStatus";
-            this.txtStatus.Size = new System.Drawing.Size(240, 26);
+            this.txtStatus.Size = new System.Drawing.Size(240, 20);
             this.txtStatus.TabIndex = 9;
             this.txtStatus.TabStop = false;
             this.txtStatus.Text = "Not Active";
@@ -83,7 +84,7 @@
             this.txtSeverity.Location = new System.Drawing.Point(239, 10);
             this.txtSeverity.Name = "txtSeverity";
             this.txtSeverity.PlaceHolderText = "Severity";
-            this.txtSeverity.Size = new System.Drawing.Size(100, 26);
+            this.txtSeverity.Size = new System.Drawing.Size(100, 20);
             this.txtSeverity.TabIndex = 1;
             this.txtSeverity.Text = null;
             this.txtSeverity.Validating += new System.ComponentModel.CancelEventHandler(this.txtSeverity_Validating);
@@ -95,7 +96,7 @@
             this.txtSince.Location = new System.Drawing.Point(345, 10);
             this.txtSince.Name = "txtSince";
             this.txtSince.PlaceHolderText = "Since";
-            this.txtSince.Size = new System.Drawing.Size(100, 26);
+            this.txtSince.Size = new System.Drawing.Size(100, 20);
             this.txtSince.TabIndex = 2;
             this.txtSince.Text = null;
             this.txtSince.Validating += new System.ComponentModel.CancelEventHandler(this.txtSince_Validating);
@@ -107,7 +108,7 @@
             this.txtKeyword.Location = new System.Drawing.Point(877, 10);
             this.txtKeyword.Name = "txtKeyword";
             this.txtKeyword.PlaceHolderText = "Keyword";
-            this.txtKeyword.Size = new System.Drawing.Size(100, 26);
+            this.txtKeyword.Size = new System.Drawing.Size(100, 20);
             this.txtKeyword.TabIndex = 7;
             this.txtKeyword.Text = null;
             this.txtKeyword.Validated += new System.EventHandler(this.txt_Validated);
@@ -118,7 +119,7 @@
             this.txtMethod.Location = new System.Drawing.Point(771, 10);
             this.txtMethod.Name = "txtMethod";
             this.txtMethod.PlaceHolderText = "Method";
-            this.txtMethod.Size = new System.Drawing.Size(100, 26);
+            this.txtMethod.Size = new System.Drawing.Size(100, 20);
             this.txtMethod.TabIndex = 6;
             this.txtMethod.Text = null;
             this.txtMethod.Validated += new System.EventHandler(this.txt_Validated);
@@ -129,7 +130,7 @@
             this.txtClass.Location = new System.Drawing.Point(665, 10);
             this.txtClass.Name = "txtClass";
             this.txtClass.PlaceHolderText = "Class";
-            this.txtClass.Size = new System.Drawing.Size(100, 26);
+            this.txtClass.Size = new System.Drawing.Size(100, 20);
             this.txtClass.TabIndex = 5;
             this.txtClass.Text = null;
             this.txtClass.Validated += new System.EventHandler(this.txt_Validated);
@@ -140,7 +141,7 @@
             this.txtAssembly.Location = new System.Drawing.Point(559, 10);
             this.txtAssembly.Name = "txtAssembly";
             this.txtAssembly.PlaceHolderText = "Assembly";
-            this.txtAssembly.Size = new System.Drawing.Size(100, 26);
+            this.txtAssembly.Size = new System.Drawing.Size(100, 20);
             this.txtAssembly.TabIndex = 4;
             this.txtAssembly.Text = null;
             this.txtAssembly.Validated += new System.EventHandler(this.txt_Validated);
@@ -151,7 +152,7 @@
             this.txtSource.Location = new System.Drawing.Point(453, 10);
             this.txtSource.Name = "txtSource";
             this.txtSource.PlaceHolderText = "Source";
-            this.txtSource.Size = new System.Drawing.Size(100, 26);
+            this.txtSource.Size = new System.Drawing.Size(100, 20);
             this.txtSource.TabIndex = 3;
             this.txtSource.Text = null;
             this.txtSource.Validated += new System.EventHandler(this.txt_Validated);
@@ -195,7 +196,7 @@
             this.dataGridViewTextBoxColumn1.MinimumWidth = 8;
             this.dataGridViewTextBoxColumn1.Name = "dataGridViewTextBoxColumn1";
             this.dataGridViewTextBoxColumn1.ReadOnly = true;
-            this.dataGridViewTextBoxColumn1.Width = 123;
+            this.dataGridViewTextBoxColumn1.Width = 83;
             // 
             // dataGridViewTextBoxColumn2
             // 
@@ -204,7 +205,7 @@
             this.dataGridViewTextBoxColumn2.MinimumWidth = 8;
             this.dataGridViewTextBoxColumn2.Name = "dataGridViewTextBoxColumn2";
             this.dataGridViewTextBoxColumn2.ReadOnly = true;
-            this.dataGridViewTextBoxColumn2.Width = 96;
+            this.dataGridViewTextBoxColumn2.Width = 66;
             // 
             // dataGridViewTextBoxColumn3
             // 
@@ -213,7 +214,7 @@
             this.dataGridViewTextBoxColumn3.MinimumWidth = 8;
             this.dataGridViewTextBoxColumn3.Name = "dataGridViewTextBoxColumn3";
             this.dataGridViewTextBoxColumn3.ReadOnly = true;
-            this.dataGridViewTextBoxColumn3.Width = 101;
+            this.dataGridViewTextBoxColumn3.Width = 70;
             // 
             // dataGridViewTextBoxColumn4
             // 
@@ -222,7 +223,7 @@
             this.dataGridViewTextBoxColumn4.MinimumWidth = 8;
             this.dataGridViewTextBoxColumn4.Name = "dataGridViewTextBoxColumn4";
             this.dataGridViewTextBoxColumn4.ReadOnly = true;
-            this.dataGridViewTextBoxColumn4.Width = 110;
+            this.dataGridViewTextBoxColumn4.Width = 75;
             // 
             // dataGridViewTextBoxColumn5
             // 
@@ -231,7 +232,7 @@
             this.dataGridViewTextBoxColumn5.MinimumWidth = 8;
             this.dataGridViewTextBoxColumn5.Name = "dataGridViewTextBoxColumn5";
             this.dataGridViewTextBoxColumn5.ReadOnly = true;
-            this.dataGridViewTextBoxColumn5.Width = 155;
+            this.dataGridViewTextBoxColumn5.Width = 104;
             // 
             // dataGridViewTextBoxColumn6
             // 
@@ -240,7 +241,7 @@
             this.dataGridViewTextBoxColumn6.MinimumWidth = 8;
             this.dataGridViewTextBoxColumn6.Name = "dataGridViewTextBoxColumn6";
             this.dataGridViewTextBoxColumn6.ReadOnly = true;
-            this.dataGridViewTextBoxColumn6.Width = 126;
+            this.dataGridViewTextBoxColumn6.Width = 85;
             // 
             // dataGridViewTextBoxColumn7
             // 
@@ -249,11 +250,22 @@
             this.dataGridViewTextBoxColumn7.MinimumWidth = 8;
             this.dataGridViewTextBoxColumn7.Name = "dataGridViewTextBoxColumn7";
             this.dataGridViewTextBoxColumn7.ReadOnly = true;
-            this.dataGridViewTextBoxColumn7.Width = 141;
+            this.dataGridViewTextBoxColumn7.Width = 96;
+            // 
+            // btnTree
+            // 
+            this.btnTree.Location = new System.Drawing.Point(1329, 12);
+            this.btnTree.Name = "btnTree";
+            this.btnTree.Size = new System.Drawing.Size(75, 23);
+            this.btnTree.TabIndex = 12;
+            this.btnTree.Text = "Summary";
+            this.btnTree.UseVisualStyleBackColor = true;
+            this.btnTree.Click += new System.EventHandler(this.btnTree_Click);
             // 
             // frmLogViewer
             // 
             this.ClientSize = new System.Drawing.Size(1822, 893);
+            this.Controls.Add(this.btnTree);
             this.Controls.Add(this.dgvEntries);
             this.Controls.Add(this.txtSeverity);
             this.Controls.Add(this.txtStatus);
@@ -285,5 +297,6 @@
         private System.Windows.Forms.DataGridViewTextBoxColumn dataGridViewTextBoxColumn5;
         private System.Windows.Forms.DataGridViewTextBoxColumn dataGridViewTextBoxColumn6;
         private System.Windows.Forms.DataGridViewTextBoxColumn dataGridViewTextBoxColumn7;
+        private System.Windows.Forms.Button btnTree;
     }
 }

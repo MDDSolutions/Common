@@ -58,17 +58,20 @@ namespace MDDWinForms
         private void RichLogEntryBindingSource_CurrentChanged(object sender, EventArgs e)
         {
             var current = richLogEntryBindingSource.Current;
-            var type = current.GetType();
-            if (type == _lastType)
+            if (current != null)
             {
-                SetValues();
+                var type = current.GetType();
+                if (type == _lastType)
+                {
+                    SetValues();
+                }
+                else
+                {
+                    _lastType = type;
+                    RebuildDynamicUI();
+                }
+                ParentLogViewer?.GoTo(richLogEntryBindingSource.Position);
             }
-            else
-            {
-                _lastType = type;
-                RebuildDynamicUI();
-            }
-            ParentLogViewer?.GoTo(richLogEntryBindingSource.Position);
         }
         private void SetValues()
         {
