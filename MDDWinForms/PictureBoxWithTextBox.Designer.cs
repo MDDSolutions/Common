@@ -13,12 +13,16 @@
         /// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
         protected override void Dispose(bool disposing)
         {
-            if (disposing && (components != null))
+            try
             {
-                components.Dispose();
+                if (disposing && (components != null))
+                {
+                    components.Dispose();
+                }
+                Reset();
+                base.Dispose(disposing);
             }
-            Reset();
-            base.Dispose(disposing);
+            catch { }
         }
 
         #region Component Designer generated code
