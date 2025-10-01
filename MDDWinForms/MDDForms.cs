@@ -654,6 +654,23 @@ namespace MDDWinForms
         {
             form.SynchronizedInvoke(() => SetWaitCursor(form, false));
         }
+        public static IEnumerable<(Control control, Binding binding)> GetBindingsForBindingSource(Control container, BindingSource bindingSource)
+        {
+            foreach (Control control in container.Controls)
+            {
+                foreach (Binding binding in control.DataBindings)
+                {
+                    if (binding.DataSource == bindingSource)
+                    {
+                        yield return (control, binding);
+                    }
+                }
+
+                // Recursively check child controls
+                foreach (var child in GetBindingsForBindingSource(control, bindingSource))
+                    yield return child;
+            }
+        }
 
 
         private static void F_FormClosing(object sender, FormClosingEventArgs e)

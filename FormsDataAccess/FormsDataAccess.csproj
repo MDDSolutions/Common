@@ -85,6 +85,7 @@
     </Compile>
     <Compile Include="Prompt.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="TrackedDataBinder.cs" />
     <Compile Include="TrackerBindingSource.cs" />
   </ItemGroup>
   <ItemGroup>
