@@ -295,6 +295,18 @@ namespace FormsDataAccess
         private DirtySnapshot _lastDirty = new DirtySnapshot(false, false, 0, 0);
 
 
+        private void EndAllEditSessions(bool clearErrors = true, bool reformatDates = false)
+        {
+            foreach (var m in _maps)
+            {
+                if (clearErrors) { _pendingControls.Remove(m.Control); _errors?.SetError(m.Control, ""); }
+                m.HasPendingParsed = false; m.PendingParsedValue = null;
+                m.HasStagedValidValue = false; m.StagedValidValue = null;
+                m.InEditSession = false;
+                if (reformatDates && Foundation.IsDateTimeType(m.EntityPropType))
+                    FormatDateForDisplay(m);
+            }
+        }
 
         /// <summary>
         /// Reset all controls from the current entity (model → UI). Useful for POCOs.
@@ -398,11 +410,11 @@ namespace FormsDataAccess
                     c.Enabled = !m.PublicSetter;
                 }
 
-                if (m.EnterHandler == null)
-                {
-                    m.EnterHandler = (s, e) => { m.InEditSession = true; };
-                    c.Enter += m.EnterHandler;
-                }
+                //if (m.EnterHandler == null)
+                //{
+                //    m.EnterHandler = (s, e) => { m.InEditSession = true; };
+                //    c.Enter += m.EnterHandler;
+                //}
                 m.ValidatingHandler = (s, e) => OnValidating(m, e);
                 c.Validating += m.ValidatingHandler;
 
@@ -413,6 +425,15 @@ namespace FormsDataAccess
         private void OnValidating(Map m, CancelEventArgs e)
         {
             if (m.Setter == null) return;
+
+            // Run validation only if this control has been edited or has pending state
+            bool hasPendingError = _pendingControls.Contains(m.Control);
+            if (!m.InEditSession && !m.HasPendingParsed && !hasPendingError)
+                return;
+
+            // For DateTime textboxes: also skip if not in edit session (prevents display→model precision churn)
+            if (Foundation.IsDateTimeType(m.EntityPropType) && m.Control is TextBoxBase && !m.InEditSession)
+                return;
 
             // Source value
             string text = null; object raw = null;
@@ -449,7 +470,11 @@ namespace FormsDataAccess
         {
             if (m.Setter == null) return;
             // successful exit from the field
+            bool wasEditing = m.InEditSession;
             m.InEditSession = false;
+
+            if (!wasEditing && !m.HasStagedValidValue && !_pendingControls.Contains(m.Control))
+                return; // nothing to do
 
             // If Validating staged a change, commit once
             if (m.HasStagedValidValue)
@@ -527,6 +552,8 @@ namespace FormsDataAccess
         {
             // Unsubscribe previous
             UnsubscribeEntity();
+
+            EndAllEditSessions(true, false);
 
             _entity = entity;
             _tracked = tracked;
@@ -656,6 +683,7 @@ namespace FormsDataAccess
         {
             if (m.ProgrammaticSet) return;
             if (_entity == null) return;
+            m.InEditSession = true;
             var text = m.Control.Text;
 
             string err; object parsed;
@@ -689,6 +717,7 @@ namespace FormsDataAccess
         private void OnComboChanged(Map m, ComboBox cb)
         {
             if (m.ProgrammaticSet) return;
+            m.InEditSession = true;
             object candidate = (!string.IsNullOrEmpty(cb.ValueMember) && cb.SelectedValue != null) ? cb.SelectedValue : (object)cb.Text;
             if (candidate is string)
             {
@@ -721,6 +750,7 @@ namespace FormsDataAccess
         private void OnValueLikeChanged(Map m, object candidate)
         {
             if (m.ProgrammaticSet) return;
+            m.InEditSession = true;
             if (_entity == null) return;
             ClearPending(m);
 
