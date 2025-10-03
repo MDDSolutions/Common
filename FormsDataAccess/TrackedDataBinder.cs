@@ -249,7 +249,7 @@ namespace FormsDataAccess
             {
                 if (dirtyprops.TryGetValue(m.EntityProp, out var dirtyval))
                 {
-                    if (!DBEngine.ValueEquals(dirtyval.OldValue, m.PendingParsedValue, m.EntityPropType))
+                    if (!Foundation.ValueEquals(dirtyval.OldValue, m.PendingParsedValue, m.EntityPropType))
                         return;
                 }
                 else
@@ -344,7 +344,7 @@ namespace FormsDataAccess
             {
                 var c = m.Control;
 
-                if (c is TextBoxBase tb1 && IsDateTimeType(m.EntityPropType))
+                if (c is TextBoxBase tb1 && Foundation.IsDateTimeType(m.EntityPropType))
                 {
                     m.EnterHandler = (s, e) => { m.InEditSession = true; EnterDateInputMode(m); };
                     c.Enter += m.EnterHandler;
@@ -428,7 +428,7 @@ namespace FormsDataAccess
             string err; object parsed;
             if (text != null)
             {
-                if (!TryConvert(text, m.EntityPropType, out parsed, out err))
+                if (!Foundation.TryConvert(text, m.EntityPropType, out parsed, out err))
                 {
                     SetPending(m, err ?? "Invalid value");
                     e.Cancel = true;            // block leaving
@@ -437,12 +437,12 @@ namespace FormsDataAccess
             }
             else
             {
-                parsed = Coerce(raw, m.EntityPropType);
+                parsed = Foundation.Coerce(raw, m.EntityPropType);
             }
 
             // It’s valid. Stage for commit if different. Don’t mutate UI here.
             var current = m.Getter(_entity);
-            m.HasStagedValidValue = !DBEngine.ValueEquals(parsed, current, m.EntityPropType);
+            m.HasStagedValidValue = !Foundation.ValueEquals(parsed, current, m.EntityPropType);
             m.StagedValidValue = m.HasStagedValidValue ? parsed : null;
         }
         private void OnValidated(Map m)
@@ -463,7 +463,7 @@ namespace FormsDataAccess
             ApplyQueuedExternalIfAny(m);
 
             // reformat (e.g., DateTime display) AFTER commit
-            if (IsDateTimeType(m.EntityPropType))
+            if (Foundation.IsDateTimeType(m.EntityPropType))
                 FormatDateForDisplay(m);
 
             //// visuals + dirty signal
@@ -659,7 +659,7 @@ namespace FormsDataAccess
             var text = m.Control.Text;
 
             string err; object parsed;
-            if (!TryConvert(text, m.EntityPropType, out parsed, out err))
+            if (!Foundation.TryConvert(text, m.EntityPropType, out parsed, out err))
             {
                 // Invalid/incomplete → EditPending; don’t touch model
                 SetPending(m, err ?? "Invalid value");
@@ -672,7 +672,7 @@ namespace FormsDataAccess
             ClearPending(m);
 
             var current = m.Getter(_entity);
-            if (DBEngine.ValueEquals(parsed, current, m.EntityPropType))
+            if (Foundation.ValueEquals(parsed, current, m.EntityPropType))
             {
                 m.HasPendingParsed = false; m.PendingParsedValue = null;
             }
@@ -697,9 +697,9 @@ namespace FormsDataAccess
             }
             ClearPending(m);
 
-            var coerced = Coerce(candidate, m.EntityPropType);
+            var coerced = Foundation.Coerce(candidate, m.EntityPropType);
             var current = m.Getter(_entity);
-            if (!DBEngine.ValueEquals(coerced, current, m.EntityPropType))
+            if (!Foundation.ValueEquals(coerced, current, m.EntityPropType))
             {
                 m.HasPendingParsed = true; m.PendingParsedValue = coerced;
                 if (UpdateCommitMode == CommitMode.Immediate)
@@ -724,9 +724,9 @@ namespace FormsDataAccess
             if (_entity == null) return;
             ClearPending(m);
 
-            var coerced = Coerce(candidate, m.EntityPropType);
+            var coerced = Foundation.Coerce(candidate, m.EntityPropType);
             var current = m.Getter(_entity);
-            if (!DBEngine.ValueEquals(coerced, current, m.EntityPropType))
+            if (!Foundation.ValueEquals(coerced, current, m.EntityPropType))
             {
                 m.HasPendingParsed = true; m.PendingParsedValue = coerced;
                 if (UpdateCommitMode == CommitMode.Immediate)
@@ -744,7 +744,7 @@ namespace FormsDataAccess
         {
             if (!m.HasPendingParsed) return;
             var current = m.Getter(_entity);
-            if (DBEngine.ValueEquals(m.PendingParsedValue, current, m.EntityPropType))
+            if (Foundation.ValueEquals(m.PendingParsedValue, current, m.EntityPropType))
             {
                 m.HasPendingParsed = false; m.PendingParsedValue = null;
                 UpdateVisual(m);
@@ -792,29 +792,29 @@ namespace FormsDataAccess
                             c.Text = ToControlString(value, m.EntityPropType);
                         else if (c is CheckBox chk)
                         {
-                            if (Under(m.EntityPropType) == typeof(bool) && chk.ThreeState)
+                            if (Foundation.Under(m.EntityPropType) == typeof(bool) && chk.ThreeState)
                             {
                                 bool? nb = value == null ? default : Convert.ToBoolean(value);
                                 chk.CheckState = nb == null ? CheckState.Indeterminate : (nb.Value ? CheckState.Checked : CheckState.Unchecked);
                             }
                             else
                             {
-                                chk.Checked = Convert.ToBoolean(Coerce(value, typeof(bool)));
+                                chk.Checked = Convert.ToBoolean(Foundation.Coerce(value, typeof(bool)));
                             }
                         }
                         else if (c is RadioButton)
-                            ((RadioButton)c).Checked = Convert.ToBoolean(Coerce(value, typeof(bool)));
+                            ((RadioButton)c).Checked = Convert.ToBoolean(Foundation.Coerce(value, typeof(bool)));
                         else if (c is DateTimePicker dtp)
                         {
                             if (dtp.ShowCheckBox)
                                 dtp.Checked = value != null;
                             if (value != null)
-                                dtp.Value = (DateTime)Coerce(value, typeof(DateTime));
+                                dtp.Value = (DateTime)Foundation.Coerce(value, typeof(DateTime));
                             else
                                 dtp.Value = default;
                         }                        
                         else if (c is NumericUpDown)
-                            ((NumericUpDown)c).Value = Convert.ToDecimal(Coerce(value, typeof(decimal)));
+                            ((NumericUpDown)c).Value = Convert.ToDecimal(Foundation.Coerce(value, typeof(decimal)));
                         else if (c is ComboBox)
                         {
                             var cb = (ComboBox)c;
@@ -921,71 +921,15 @@ namespace FormsDataAccess
             if (withdirty) RaiseDirtyStateChanged();
         }
 
-        private static Type Under(Type t) { return Nullable.GetUnderlyingType(t) ?? t; }
+        
         // =============== Conversion helpers ===============
-        private static object Coerce(object value, Type target)
-        {
-            if (value == null) return null;
-            var t = Under(target);
-
-            if (t.IsEnum)
-                return Enum.ToObject(t, Convert.ChangeType(value, Enum.GetUnderlyingType(t), CultureInfo.InvariantCulture));
-
-            if (t == typeof(Guid)) return (value is Guid) ? value : (object)Guid.Parse(Convert.ToString(value, CultureInfo.InvariantCulture));
-            if (t == typeof(DateTime)) return (value is DateTime) ? value : (object)DateTime.Parse(Convert.ToString(value, CultureInfo.InvariantCulture), CultureInfo.InvariantCulture);
-            if (t == typeof(TimeSpan)) return (value is TimeSpan) ? value : (object)TimeSpan.Parse(Convert.ToString(value, CultureInfo.InvariantCulture), CultureInfo.InvariantCulture);
-
-            return Convert.ChangeType(value, t, CultureInfo.InvariantCulture);
-        }
-
-        private static bool TryConvert(string text, Type target, out object value, out string error)
-        {
-            value = null; error = null;
-            var t = Under(target);
-
-            if (string.IsNullOrWhiteSpace(text) && (t == typeof(string) || Nullable.GetUnderlyingType(target) != null))
-            {
-                value = null;
-                return true;
-            }
-
-            if (t == typeof(string))  { value = text; return true; }
-
-            if (t == typeof(DateTime))
-            {
-                DateTime dt;
-
-                if (Foundation.TryParseDateTime(text, out dt))
-                { value = dt; return true; }
-                error = "Enter valid datetime"; return false;
-            }
-
-            int i; long l; float f; double d; decimal m;
-            bool b;
-            if (t == typeof(int)) { if (int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out i)) { value = i; return true; } error = "Invalid integer"; return false; }
-            if (t == typeof(long)) { if (long.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out l)) { value = l; return true; } error = "Invalid integer"; return false; }
-            if (t == typeof(float)) { if (float.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out f)) { value = f; return true; } error = "Invalid number"; return false; }
-            if (t == typeof(double)) { if (double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out d)) { value = d; return true; } error = "Invalid number"; return false; }
-            if (t == typeof(decimal)) { if (decimal.TryParse(text, NumberStyles.Number, CultureInfo.InvariantCulture, out m)) { value = m; return true; } error = "Invalid number"; return false; }
-            if (t == typeof(bool)) { if (bool.TryParse(text, out b)) { value = b; return true; } error = "True/False"; return false; }
-
-            if (t.IsEnum)
-            {
-                try { value = Enum.Parse(t, text, true); return true; }
-                catch { error = "Invalid option"; return false; }
-            }
-
-            try { value = Convert.ChangeType(text, t, CultureInfo.InvariantCulture); return true; }
-            catch { error = "Invalid value"; return false; }
-        }
-        private static bool IsDateTimeType(Type t) => (Nullable.GetUnderlyingType(t) ?? t) == typeof(DateTime);
 
         private void EnterDateInputMode(Map m)
         {
             var cur = m.Getter(_entity);
             if (cur == null) return;
 
-            var dt = (DateTime)Coerce(cur, typeof(DateTime));
+            var dt = (DateTime)Foundation.Coerce(cur, typeof(DateTime));
             m.ProgrammaticSet = true;
             try
             {
@@ -1002,7 +946,7 @@ namespace FormsDataAccess
         // Re-apply display format after committing/refreshing
         private void FormatDateForDisplay(Map m)
         {
-            if (!IsDateTimeType(m.EntityPropType)) return;
+            if (!Foundation.IsDateTimeType(m.EntityPropType)) return;
             SetControlValue(m, m.Getter(_entity)); // uses ToControlString -> display format
         }
 

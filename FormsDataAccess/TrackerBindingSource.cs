@@ -1,4 +1,5 @@
 ﻿using MDDDataAccess;
+using MDDFoundation;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -100,14 +101,14 @@ namespace FormsDataAccess
 
             // If the next entry is the same performer, just advance
             if (currentIndex + 1 < bindinglist.Count &&
-                DBEngine.ValueEquals(TrackedEntity<T>.GetKeyValue(bindinglist[currentIndex + 1]), incomingid))
+                Foundation.ValueEquals(TrackedEntity<T>.GetKeyValue(bindinglist[currentIndex + 1]), incomingid))
             {
                 bindingSource.Position = currentIndex + 1;
                 done = true;
             }
 
             if (!done && currentIndex >= 1 &&
-                    DBEngine.ValueEquals(TrackedEntity<T>.GetKeyValue(bindinglist[currentIndex - 1]), incomingid))
+                    Foundation.ValueEquals(TrackedEntity<T>.GetKeyValue(bindinglist[currentIndex - 1]), incomingid))
             {
                 bindingSource.Position = currentIndex - 1;
                 done = true;
