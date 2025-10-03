@@ -68,6 +68,29 @@ namespace FormsDataAccess
                 // Initialize to current
                 if (_list.CurrentEntity != null)
                     LoadFromList(_list.CurrentEntity, _list.Current);
+                if (_list.SaveChanges == null)
+                {
+                    _list.SaveChanges = (e) =>
+                    {
+                        return _root.SynchronizedInvoke<bool?>(() =>
+                        {
+                            switch (MessageBox.Show("Save Changes?", "Confirmation", MessageBoxButtons.YesNoCancel))
+                            {
+                                case DialogResult.Yes:
+                                    return true;
+                                case DialogResult.No:
+                                    return false;
+                                case DialogResult.Cancel:
+                                default:
+                                    return null;
+                            }
+                        });
+                    };
+                }
+                if (_list.TrackedListError == null)
+                {
+                    _list.TrackedListError += (s, e) => TrackedDataBinderError?.Invoke(s, e);
+                }
             }
         }
         /// <summary>
@@ -80,6 +103,8 @@ namespace FormsDataAccess
             WireButtons();
             RefreshButtonsEnabled();
         }
+        public Action<T, string, Type, string> ValidationError { get; set; } = (entity, value, type, propname) => MessageBox.Show($"'{value}' is not a valid value for {type.Name} in property {propname}");
+        public Action<object, Exception> TrackedDataBinderError { get; set; } = (source, ex) => MessageBox.Show(ex.ToString());
         // Map: one per control-binding that targets _bindingSource
         private sealed class Map : PropertyDelegateInfo<T> // reuse Getter/Setter/flags from your APD
         {
@@ -105,15 +130,37 @@ namespace FormsDataAccess
             public object QueuedExternalValue;
 
             // cached event handlers so we can unwind reliably
-            public EventHandler EnterHandler;
-            public CancelEventHandler ValidatingHandler;
-            public EventHandler ValidatedHandler;
-            public EventHandler TextChangedHandler;
-            public EventHandler CheckedChangedHandler;
-            public EventHandler SelectedValueChangedHandler;
-            public EventHandler ValueChangedHandler;
-            public EventHandler ComboTextChangedHandler;
+            public HookBag Hooks { get; } = new HookBag();
+            //public EventHandler EnterHandler;
+            //public CancelEventHandler ValidatingHandler;
+            //public EventHandler ValidatedHandler;
+            //public EventHandler TextChangedHandler;
+            //public EventHandler CheckedChangedHandler;
+            //public EventHandler SelectedValueChangedHandler;
+            //public EventHandler ValueChangedHandler;
+            //public EventHandler ComboTextChangedHandler;
         }
+        sealed class HookBag
+        {
+            private readonly List<Action> _unhooks = new List<Action>();
+
+            // Generic, type-safe hook
+            public void Add<THandler>(Action<THandler> attach, Action<THandler> detach, THandler handler) where THandler : Delegate
+            {
+                attach(handler);                                // subscribe now
+                _unhooks.Add(() => detach(handler));            // remember how to unsubscribe
+            }
+
+            public void UnhookAll()
+            {
+                for (int i = _unhooks.Count - 1; i >= 0; i--)   // reverse order just in case
+                {
+                    try { _unhooks[i](); } catch { /* swallow */ }
+                }
+                _unhooks.Clear();
+            }
+        }
+
         private readonly List<Map> _maps = new List<Map>(32);
         private readonly Dictionary<string, Map> _byProp = new Dictionary<string, Map>(StringComparer.Ordinal);
         private readonly Dictionary<Control, Map> _byControl = new Dictionary<Control, Map>();
@@ -270,6 +317,7 @@ namespace FormsDataAccess
 
             _lastDirty = snap;
 
+            if (_btnSave != null) _btnSave.Enabled = (dirty || pending); // && _list.SaveCommand.CanExecute(null);  CanExecute will return false because the model may not know about the dirtiness yet if we're only pending
             var args = new DirtyStateChangedEventArgs(dirty, pending, count);
             DirtyStateChanged?.Invoke(this, args);
         }
@@ -358,68 +406,51 @@ namespace FormsDataAccess
 
                 if (c is TextBoxBase tb1 && Foundation.IsDateTimeType(m.EntityPropType))
                 {
-                    m.EnterHandler = (s, e) => { m.InEditSession = true; EnterDateInputMode(m); };
-                    c.Enter += m.EnterHandler;
-                    m.TextChangedHandler = (s, e) => OnTextLikeChanged(m);
-                    c.TextChanged += m.TextChangedHandler;
+                    m.Hooks.Add<EventHandler>(h => c.Enter += h, h => c.Enter -= h, (s, e) => EnterDateInputMode(m));
+                    m.Hooks.Add<EventHandler>(h => c.TextChanged += h, h => c.TextChanged -= h, (s, e) => OnTextLikeChanged(m));
                     tb1.ReadOnly = !m.PublicSetter;
                 }
                 else if (c is TextBoxBase tb2)
                 {
-                    m.TextChangedHandler = (s, e) => OnTextLikeChanged(m);
-                    c.TextChanged += m.TextChangedHandler;
+                    m.Hooks.Add<EventHandler>(h => c.TextChanged += h, h => c.TextChanged -= h, (s, e) => OnTextLikeChanged(m));
                     tb2.ReadOnly = !m.PublicSetter;
                 }
                 else if (c is ComboBox cbx)
                 {
                     var cb = (ComboBox)c;
-                    m.SelectedValueChangedHandler = (s, e) => OnComboChanged(m, cb);
-                    m.ComboTextChangedHandler = (s, e) => OnComboTextChanged(m, cb);
-                    cb.SelectedValueChanged += m.SelectedValueChangedHandler;
-                    cb.TextChanged += m.ComboTextChangedHandler;
+                    m.Hooks.Add<EventHandler>(h => cb.SelectedValueChanged += h, h => cb.SelectedValueChanged -= h, (s, e) => OnComboChanged(m, cb));
+                    m.Hooks.Add<EventHandler>(h => cb.TextChanged += h, h => cb.TextChanged -= h, (s, e) => OnComboTextChanged(m, cb));
                     cbx.Enabled = !m.PublicSetter;
                 }
                 else if (c is CheckBox chk)
                 {
-                    m.CheckedChangedHandler = (s, e) => OnValueLikeChanged(m, chk.Checked);
-                    chk.CheckedChanged += m.CheckedChangedHandler;
+                    m.Hooks.Add<EventHandler>(h => chk.CheckedChanged += h, h => chk.CheckedChanged -= h, (s, e) => OnValueLikeChanged(m, chk.Checked));
                     chk.Enabled = !m.PublicSetter;
                 }
                 else if (c is RadioButton rb)
                 {
-                    m.CheckedChangedHandler = (s, e) => OnValueLikeChanged(m, rb.Checked);
-                    rb.CheckedChanged += m.CheckedChangedHandler;
+                    m.Hooks.Add<EventHandler>(h => rb.CheckedChanged += h, h => rb.CheckedChanged -= h, (s, e) => OnValueLikeChanged(m, rb.Checked));
                     rb.Enabled = !m.PublicSetter;
                 }
                 else if (c is DateTimePicker dtp)
                 {
-                    m.ValueChangedHandler = (s, e) => OnValueLikeChanged(m, dtp.Value);
-                    dtp.ValueChanged += m.ValueChangedHandler;
+                    m.Hooks.Add<EventHandler>(h => dtp.ValueChanged += h, h => dtp.ValueChanged -= h, (s, e) => OnValueLikeChanged(m, dtp.Value));
                     dtp.Enabled = !m.PublicSetter;
                 }
                 else if (c is NumericUpDown nud)
                 {
-                    m.ValueChangedHandler = (s, e) => OnValueLikeChanged(m, nud.Value);
-                    nud.ValueChanged += m.ValueChangedHandler;
+                    m.Hooks.Add<EventHandler>(h => nud.ValueChanged += h, h => nud.ValueChanged -= h, (s, e) => OnValueLikeChanged(m, nud.Value));
                     nud.Enabled = !m.PublicSetter;
                 }
                 else
                 {
-                    m.TextChangedHandler = (s, e) => OnTextLikeChanged(m);
-                    c.TextChanged += m.TextChangedHandler;
+                    m.Hooks.Add<EventHandler>(h => c.TextChanged += h, h => c.TextChanged -= h, (s, e) => OnTextLikeChanged(m));
                     c.Enabled = !m.PublicSetter;
                 }
 
-                //if (m.EnterHandler == null)
-                //{
-                //    m.EnterHandler = (s, e) => { m.InEditSession = true; };
-                //    c.Enter += m.EnterHandler;
-                //}
-                m.ValidatingHandler = (s, e) => OnValidating(m, e);
-                c.Validating += m.ValidatingHandler;
+                m.Hooks.Add<CancelEventHandler>(h => c.Validating += h, h => c.Validating -= h, (s, e) => OnValidating(m, e));
 
-                m.ValidatedHandler = (s, e) => OnValidated(m);
-                c.Validated += m.ValidatedHandler;
+                m.Hooks.Add<EventHandler>(h => c.Validated += h, h => c.Validated -= h, (s, e) => OnValidated(m));
             }
         }
         private void OnValidating(Map m, CancelEventArgs e)
@@ -452,6 +483,7 @@ namespace FormsDataAccess
                 if (!Foundation.TryConvert(text, m.EntityPropType, out parsed, out err))
                 {
                     SetPending(m, err ?? "Invalid value");
+                    ValidationError?.Invoke(_entity, text, m.EntityPropType, m.EntityProp);
                     e.Cancel = true;            // block leaving
                     return;
                 }
@@ -501,33 +533,7 @@ namespace FormsDataAccess
         {
             foreach (var m in _maps)
             {
-                var c = m.Control;
-                try
-                {
-                    if (m.EnterHandler != null) c.Enter -= m.EnterHandler;
-                    if (m.ValidatedHandler != null) c.Validated -= m.ValidatedHandler;
-                    if (m.ValidatingHandler != null) c.Validating -= m.ValidatingHandler;
-                    if (m.TextChangedHandler != null) c.TextChanged -= m.TextChangedHandler;
-                    if (m.CheckedChangedHandler != null)
-                    {
-                        var chk = c as CheckBox; if (chk != null) chk.CheckedChanged -= m.CheckedChangedHandler;
-                        var rb = c as RadioButton; if (rb != null) rb.CheckedChanged -= m.CheckedChangedHandler;
-                    }
-                    if (m.SelectedValueChangedHandler != null)
-                    {
-                        var cb = c as ComboBox; if (cb != null) cb.SelectedValueChanged -= m.SelectedValueChangedHandler;
-                    }
-                    if (m.ComboTextChangedHandler != null)
-                    {
-                        var cb = c as ComboBox; if (cb != null) cb.TextChanged -= m.ComboTextChangedHandler;
-                    }
-                    if (m.ValueChangedHandler != null)
-                    {
-                        var dtp = c as DateTimePicker; if (dtp != null) dtp.ValueChanged -= m.ValueChangedHandler;
-                        var nud = c as NumericUpDown; if (nud != null) nud.ValueChanged -= m.ValueChangedHandler;
-                    }
-                }
-                catch { }
+                try { m.Hooks.UnhookAll(); } catch { /* swallow */ }
             }
         }
 
@@ -1029,8 +1035,16 @@ namespace FormsDataAccess
         private void BtnNew_Click(object sender, EventArgs e)
         { CommitAll(); OnNewRequested(); }
 
-        public event EventHandler NewRequested; // host can handle creating/adding a new entity
-        private void OnNewRequested() { var h = NewRequested; if (h != null) h(this, EventArgs.Empty); }
+        public Func<T> NewRequested; // host can handle creating/adding a new entity
+        private async void OnNewRequested() 
+        {
+            T newobj;
+            if (NewRequested != null)
+                newobj = NewRequested();
+            else
+                newobj = new T();
+            await _list.SetCurrentAsync(newobj);
+        }
 
         private void RefreshButtonsEnabled()
         {
