@@ -249,7 +249,7 @@ namespace FormsDataAccess
             {
                 if (dirtyprops.TryGetValue(m.EntityProp, out var dirtyval))
                 {
-                    if (!ValueEquals(dirtyval.OldValue, m.PendingParsedValue, m.EntityPropType))
+                    if (!DBEngine.ValueEquals(dirtyval.OldValue, m.PendingParsedValue, m.EntityPropType))
                         return;
                 }
                 else
@@ -442,7 +442,7 @@ namespace FormsDataAccess
 
             // It’s valid. Stage for commit if different. Don’t mutate UI here.
             var current = m.Getter(_entity);
-            m.HasStagedValidValue = !ValueEquals(parsed, current, m.EntityPropType);
+            m.HasStagedValidValue = !DBEngine.ValueEquals(parsed, current, m.EntityPropType);
             m.StagedValidValue = m.HasStagedValidValue ? parsed : null;
         }
         private void OnValidated(Map m)
@@ -672,7 +672,7 @@ namespace FormsDataAccess
             ClearPending(m);
 
             var current = m.Getter(_entity);
-            if (ValueEquals(parsed, current, m.EntityPropType))
+            if (DBEngine.ValueEquals(parsed, current, m.EntityPropType))
             {
                 m.HasPendingParsed = false; m.PendingParsedValue = null;
             }
@@ -699,7 +699,7 @@ namespace FormsDataAccess
 
             var coerced = Coerce(candidate, m.EntityPropType);
             var current = m.Getter(_entity);
-            if (!ValueEquals(coerced, current, m.EntityPropType))
+            if (!DBEngine.ValueEquals(coerced, current, m.EntityPropType))
             {
                 m.HasPendingParsed = true; m.PendingParsedValue = coerced;
                 if (UpdateCommitMode == CommitMode.Immediate)
@@ -726,7 +726,7 @@ namespace FormsDataAccess
 
             var coerced = Coerce(candidate, m.EntityPropType);
             var current = m.Getter(_entity);
-            if (!ValueEquals(coerced, current, m.EntityPropType))
+            if (!DBEngine.ValueEquals(coerced, current, m.EntityPropType))
             {
                 m.HasPendingParsed = true; m.PendingParsedValue = coerced;
                 if (UpdateCommitMode == CommitMode.Immediate)
@@ -744,7 +744,7 @@ namespace FormsDataAccess
         {
             if (!m.HasPendingParsed) return;
             var current = m.Getter(_entity);
-            if (ValueEquals(m.PendingParsedValue, current, m.EntityPropType))
+            if (DBEngine.ValueEquals(m.PendingParsedValue, current, m.EntityPropType))
             {
                 m.HasPendingParsed = false; m.PendingParsedValue = null;
                 UpdateVisual(m);
@@ -977,19 +977,6 @@ namespace FormsDataAccess
 
             try { value = Convert.ChangeType(text, t, CultureInfo.InvariantCulture); return true; }
             catch { error = "Invalid value"; return false; }
-        }
-
-        private static bool ValueEquals(object a, object b, Type t)
-        {
-            if (ReferenceEquals(a, b)) return true;
-            if (a == null || b == null) return false;
-            var nt = Under(t);
-            if (nt == typeof(string)) return string.Equals((string)a, (string)b, StringComparison.Ordinal);
-            if (nt == typeof(float)) return Math.Abs((float)a - (float)b) < 1e-6f;
-            if (nt == typeof(double)) return Math.Abs((double)a - (double)b) < 1e-9;
-            if (nt == typeof(decimal)) return (decimal)a == (decimal)b;
-            if (nt == typeof(DateTime)) return (DateTime)a == (DateTime)b;
-            return Equals(a, b);
         }
         private static bool IsDateTimeType(Type t) => (Nullable.GetUnderlyingType(t) ?? t) == typeof(DateTime);
 
