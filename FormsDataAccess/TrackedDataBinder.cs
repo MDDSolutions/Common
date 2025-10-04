@@ -233,6 +233,7 @@ namespace FormsDataAccess
 
                     _maps.Add(map);
                     _byControl[ctl] = map;
+                    WireControls(map);
                     // Stop runtime auto-push; we'll own it
                     b.DataSourceUpdateMode = DataSourceUpdateMode.Never;
                     if (_clearDesignerBindings)
@@ -247,7 +248,62 @@ namespace FormsDataAccess
                 if (!keepbs)
                     _bindingSource = null;
             }
-            WireControls();
+        }
+        public void AddBinding(Control ctl, string ctlproperty, string objectproperty)
+        {
+            if (ctl == null) throw new Exception("Control parameter cannot be null");
+
+            Map map = null;
+            if (string.IsNullOrWhiteSpace(objectproperty))
+            {   //binding to the object itself
+                var cpi = ctl.GetType().GetProperty(ctlproperty, BindingFlags.Instance | BindingFlags.Public);
+                if (cpi != null && cpi.CanWrite && cpi.PropertyType.IsAssignableFrom(typeof(T)))
+                {
+                    map = new Map
+                    {
+                        Control = ctl,
+                        ControlProp = ctlproperty,
+                        EntityProp = null,
+                        EntityPropType = typeof(T),
+                        IsObjectBinding = true,
+                        ControlPropertyInfo = cpi,
+                        OriginalBackColor = ctl.BackColor
+                    };
+                }
+                else
+                {
+                    throw new Exception("Control property is not valid");
+                }
+            }
+            else
+            {
+                var allpropertydelegates = TrackedEntity<T>.GetAllPropertyDelegates();
+                PropertyDelegateInfo<T> baseInfo;
+                if (!allpropertydelegates.TryGetValue(objectproperty, out baseInfo))
+                    throw new Exception("Could not find property");
+
+                map = new Map
+                {
+                    Control = ctl,
+                    ControlProp = ctlproperty, // Text / Checked / Value / SelectedValue
+                    EntityProp = objectproperty,
+                    EntityPropType = baseInfo.PropertyType,
+                    Optional = baseInfo.Optional,
+                    Ignore = baseInfo.Ignore,
+                    Concurrency = baseInfo.Concurrency,
+                    DirtyAwareEnabled = baseInfo.DirtyAwareEnabled,
+                    Getter = baseInfo.Getter,
+                    PublicSetter = baseInfo.PublicSetter,
+                    Setter = baseInfo.Setter,
+                    OriginalBackColor = ctl.BackColor
+                };
+
+                _byProp[objectproperty] = map;      // one map per property            }
+            }
+            if (map == null) throw new Exception("Map is null somehow");
+            _maps.Add(map);
+            _byControl[ctl] = map;
+            WireControls(map);
         }
         private static IEnumerable<Control> EnumerateControls(Control root)
         {
@@ -405,59 +461,56 @@ namespace FormsDataAccess
 
 
         // =============== Control wiring ===============
-        private void WireControls()
+        private void WireControls(Map m)
         {
-            foreach (var m in _maps)
-            {
-                var c = m.Control;
+            var c = m.Control;
 
-                if (c is TextBoxBase tb1 && Foundation.IsDateTimeType(m.EntityPropType))
-                {
-                    m.Hooks.Add<EventHandler>(h => c.Enter += h, h => c.Enter -= h, (s, e) => EnterDateInputMode(m));
-                    m.Hooks.Add<EventHandler>(h => c.TextChanged += h, h => c.TextChanged -= h, (s, e) => OnTextLikeChanged(m));
-                    tb1.ReadOnly = !m.PublicSetter;
-                }
-                else if (c is TextBoxBase tb2)
-                {
-                    m.Hooks.Add<EventHandler>(h => c.TextChanged += h, h => c.TextChanged -= h, (s, e) => OnTextLikeChanged(m));
-                    tb2.ReadOnly = !m.PublicSetter;
-                }
-                else if (c is ComboBox cbx)
-                {
-                    var cb = (ComboBox)c;
-                    m.Hooks.Add<EventHandler>(h => cb.SelectedValueChanged += h, h => cb.SelectedValueChanged -= h, (s, e) => OnComboChanged(m, cb));
-                    m.Hooks.Add<EventHandler>(h => cb.TextChanged += h, h => cb.TextChanged -= h, (s, e) => OnComboTextChanged(m, cb));
-                    cbx.Enabled = !m.PublicSetter;
-                }
-                else if (c is CheckBox chk)
-                {
-                    m.Hooks.Add<EventHandler>(h => chk.CheckedChanged += h, h => chk.CheckedChanged -= h, (s, e) => OnValueLikeChanged(m, chk.Checked));
-                    chk.Enabled = !m.PublicSetter;
-                }
-                else if (c is RadioButton rb)
-                {
-                    m.Hooks.Add<EventHandler>(h => rb.CheckedChanged += h, h => rb.CheckedChanged -= h, (s, e) => OnValueLikeChanged(m, rb.Checked));
-                    rb.Enabled = !m.PublicSetter;
-                }
-                else if (c is DateTimePicker dtp)
-                {
-                    m.Hooks.Add<EventHandler>(h => dtp.ValueChanged += h, h => dtp.ValueChanged -= h, (s, e) => OnValueLikeChanged(m, dtp.Value));
-                    dtp.Enabled = !m.PublicSetter;
-                }
-                else if (c is NumericUpDown nud)
-                {
-                    m.Hooks.Add<EventHandler>(h => nud.ValueChanged += h, h => nud.ValueChanged -= h, (s, e) => OnValueLikeChanged(m, nud.Value));
-                    nud.Enabled = !m.PublicSetter;
-                }
-                else
-                {
-                    m.Hooks.Add<EventHandler>(h => c.TextChanged += h, h => c.TextChanged -= h, (s, e) => OnTextLikeChanged(m));
-                    c.Enabled = !m.PublicSetter;
-                }
-                m.Hooks.Add<CancelEventHandler>(h => c.Validating += h, h => c.Validating -= h, (s, e) => OnValidating(m, e));
-                m.Hooks.Add<EventHandler>(h => c.Validated += h, h => c.Validated -= h, (s, e) => OnValidated(m));
-                m.Hooks.Add<KeyEventHandler>(h => c.KeyDown += h, h => c.KeyDown -= h, (s, e) => OnControlKeyDown(m, e));
+            if (c is TextBoxBase tb1 && Foundation.IsDateTimeType(m.EntityPropType))
+            {
+                m.Hooks.Add<EventHandler>(h => c.Enter += h, h => c.Enter -= h, (s, e) => EnterDateInputMode(m));
+                m.Hooks.Add<EventHandler>(h => c.TextChanged += h, h => c.TextChanged -= h, (s, e) => OnTextLikeChanged(m));
+                tb1.ReadOnly = !m.PublicSetter;
             }
+            else if (c is TextBoxBase tb2)
+            {
+                m.Hooks.Add<EventHandler>(h => c.TextChanged += h, h => c.TextChanged -= h, (s, e) => OnTextLikeChanged(m));
+                tb2.ReadOnly = !m.PublicSetter;
+            }
+            else if (c is ComboBox cbx)
+            {
+                var cb = (ComboBox)c;
+                m.Hooks.Add<EventHandler>(h => cb.SelectedValueChanged += h, h => cb.SelectedValueChanged -= h, (s, e) => OnComboChanged(m, cb));
+                m.Hooks.Add<EventHandler>(h => cb.TextChanged += h, h => cb.TextChanged -= h, (s, e) => OnComboTextChanged(m, cb));
+                cbx.Enabled = !m.PublicSetter;
+            }
+            else if (c is CheckBox chk)
+            {
+                m.Hooks.Add<EventHandler>(h => chk.CheckedChanged += h, h => chk.CheckedChanged -= h, (s, e) => OnValueLikeChanged(m, chk.Checked));
+                chk.Enabled = !m.PublicSetter;
+            }
+            else if (c is RadioButton rb)
+            {
+                m.Hooks.Add<EventHandler>(h => rb.CheckedChanged += h, h => rb.CheckedChanged -= h, (s, e) => OnValueLikeChanged(m, rb.Checked));
+                rb.Enabled = !m.PublicSetter;
+            }
+            else if (c is DateTimePicker dtp)
+            {
+                m.Hooks.Add<EventHandler>(h => dtp.ValueChanged += h, h => dtp.ValueChanged -= h, (s, e) => OnValueLikeChanged(m, dtp.Value));
+                dtp.Enabled = !m.PublicSetter;
+            }
+            else if (c is NumericUpDown nud)
+            {
+                m.Hooks.Add<EventHandler>(h => nud.ValueChanged += h, h => nud.ValueChanged -= h, (s, e) => OnValueLikeChanged(m, nud.Value));
+                nud.Enabled = !m.PublicSetter;
+            }
+            else
+            {
+                m.Hooks.Add<EventHandler>(h => c.TextChanged += h, h => c.TextChanged -= h, (s, e) => OnTextLikeChanged(m));
+                c.Enabled = !m.PublicSetter;
+            }
+            m.Hooks.Add<CancelEventHandler>(h => c.Validating += h, h => c.Validating -= h, (s, e) => OnValidating(m, e));
+            m.Hooks.Add<EventHandler>(h => c.Validated += h, h => c.Validated -= h, (s, e) => OnValidated(m));
+            m.Hooks.Add<KeyEventHandler>(h => c.KeyDown += h, h => c.KeyDown -= h, (s, e) => OnControlKeyDown(m, e));
         }
         private void OnValidating(Map m, CancelEventArgs e)
         {
