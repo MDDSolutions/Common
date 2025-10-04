@@ -67,7 +67,7 @@ namespace FormsDataAccess
                 _list.PreparingForNavigation += OnPreparingForNavigation;
                 // Initialize to current
                 if (_list.CurrentEntity != null)
-                    LoadFromList(_list.CurrentEntity, _list.Current);
+                    LoadFromList(_list.CurrentEntity, _list.CurrentTracked);
                 if (_list.SaveChanges == null)
                 {
                     _list.SaveChanges = (e) =>
@@ -281,6 +281,8 @@ namespace FormsDataAccess
             dirty = true;
             pending = false;
 
+            if (_tracked == null) return;
+
             var dirtyprops = _tracked.DirtyProperties;
             if (dirtyprops.Count == 0) dirty = false;
 
@@ -306,41 +308,46 @@ namespace FormsDataAccess
             pending = false;
         }
         public event EventHandler<DirtyStateChangedEventArgs> DirtyStateChanged;
-        private void RaiseDirtyStateChanged()
+        private void RaiseDirtyStateChanged(Map m)
         {
             CalculateDirtyPending(out var dirty, out var pending);
+            //int keysHash = _tracked?.DirtyVersion ?? 0; // exact change token
+            //var snap = new DirtySnapshot(dirty, pending, count, keysHash);
+
+            //if (snap.Equals(_lastDirty)) return;          // << no-op, don’t fire
+
+            bool shouldbedirty = (dirty || pending); // && _list.SaveCommand.CanExecute(null);  CanExecute will return false because the model may not know about the dirtiness yet if we're only pending
+
+            if (_lastDirty == shouldbedirty) return;
+            _lastDirty = null;
+            if (_btnSave != null) _btnSave.SynchronizedInvoke(() => _btnSave.Enabled = shouldbedirty);
             int count = _tracked?.DirtyCount ?? 0;
-            int keysHash = _tracked?.DirtyVersion ?? 0; // exact change token
-            var snap = new DirtySnapshot(dirty, pending, count, keysHash);
-
-            if (snap.Equals(_lastDirty)) return;          // << no-op, don’t fire
-
-            _lastDirty = snap;
-
-            if (_btnSave != null) _btnSave.Enabled = (dirty || pending); // && _list.SaveCommand.CanExecute(null);  CanExecute will return false because the model may not know about the dirtiness yet if we're only pending
             var args = new DirtyStateChangedEventArgs(dirty, pending, count);
             DirtyStateChanged?.Invoke(this, args);
+            if (m != null) UpdateVisual(m, false);
+            _lastDirty = shouldbedirty;
         }
-        private struct DirtySnapshot
-        {
-            public readonly bool Committed;
-            public readonly bool Pending;
-            public readonly int DirtyCount;
-            public readonly int KeysHash; // coarse membership signal
+        //private struct DirtySnapshot
+        //{
+        //    public readonly bool Committed;
+        //    public readonly bool Pending;
+        //    public readonly int DirtyCount;
+        //    public readonly int KeysHash; // coarse membership signal
 
-            public DirtySnapshot(bool committed, bool pending, int count, int keysHash)
-            { Committed = committed; Pending = pending; DirtyCount = count; KeysHash = keysHash; }
+        //    public DirtySnapshot(bool committed, bool pending, int count, int keysHash)
+        //    { Committed = committed; Pending = pending; DirtyCount = count; KeysHash = keysHash; }
 
-            public override bool Equals(object obj)
-            {
-                if (!(obj is DirtySnapshot d)) return false;
-                return Committed == d.Committed && Pending == d.Pending &&
-                       DirtyCount == d.DirtyCount && KeysHash == d.KeysHash;
-            }
-            public override int GetHashCode() =>
-                ((Committed ? 1 : 0) * 397) ^ ((Pending ? 1 : 0) * 131) ^ (DirtyCount * 17) ^ KeysHash;
-        }
-        private DirtySnapshot _lastDirty = new DirtySnapshot(false, false, 0, 0);
+        //    public override bool Equals(object obj)
+        //    {
+        //        if (!(obj is DirtySnapshot d)) return false;
+        //        return Committed == d.Committed && Pending == d.Pending &&
+        //               DirtyCount == d.DirtyCount && KeysHash == d.KeysHash;
+        //    }
+        //    public override int GetHashCode() =>
+        //        ((Committed ? 1 : 0) * 397) ^ ((Pending ? 1 : 0) * 131) ^ (DirtyCount * 17) ^ KeysHash;
+        //}
+        //private DirtySnapshot _lastDirty = new DirtySnapshot(false, false, 0, 0);
+        private bool? _lastDirty = null;
 
 
         private void EndAllEditSessions(bool clearErrors = true, bool reformatDates = false)
@@ -372,7 +379,7 @@ namespace FormsDataAccess
                     UpdateVisual(m, false);
                 }
             }
-            RaiseDirtyStateChanged();
+            RaiseDirtyStateChanged(null);
         }
 
         /// <summary>
@@ -634,7 +641,7 @@ namespace FormsDataAccess
         }
         private void OnDirtySetChanged(object sender, DirtySetChangedEventArgs e)
         {
-            RaiseDirtyStateChanged();
+            RaiseDirtyStateChanged(null);
         }
 
         private void OnNotifierObjectPropertyUpdated(object sender, PropertyChangedWithValuesEventArgs e)
@@ -903,7 +910,7 @@ namespace FormsDataAccess
             if (_pendingControls.Count == 0 && _errors != null)
                 _errors.Clear();
             RefreshButtonsEnabled();
-            RaiseDirtyStateChanged();
+            RaiseDirtyStateChanged(m);
         }
 
         private void ResetControlsToDefault()
@@ -920,7 +927,7 @@ namespace FormsDataAccess
         private void UpdateAllVisuals()
         {
             foreach (var m in _maps.Where(x => x.EntityProp != null)) UpdateVisual(m, false);
-            RaiseDirtyStateChanged();
+            RaiseDirtyStateChanged(null);
         }
 
         private void UpdateVisual(Map m, bool withdirty = true)
@@ -954,7 +961,7 @@ namespace FormsDataAccess
                     c.BackColor = m.OriginalBackColor;
                 }
             }
-            if (withdirty) RaiseDirtyStateChanged();
+            if (withdirty) RaiseDirtyStateChanged(m);
         }
 
         
@@ -1018,7 +1025,17 @@ namespace FormsDataAccess
             CommitAll();
             if (_list != null && _list.SaveCommand != null && _list.SaveCommand.CanExecute(null))
             {
-                try { await _list.SaveCommand.ExecuteAsync(null); }
+                try 
+                { 
+                    await _list.SaveCommand.ExecuteAsync(null);
+                    //if (_list != null && (_tracked == null || _tracked != _list.CurrentTracked))
+                    //{
+                    //    _tracked = _list.CurrentTracked;
+                    //    OnListCurrentChanged();
+                    //}
+                    //RaiseDirtyStateChanged(null);
+                    //UpdateAllVisuals();
+                }
                 catch { /* surfaced via TrackedListError */ }
             }
             else if (_tracked != null && _tracked.SaveCommand != null && _tracked.SaveCommand.CanExecute(null))
@@ -1033,8 +1050,10 @@ namespace FormsDataAccess
         private void BtnPrev_Click(object sender, EventArgs e)
         { CommitAll(); if (_list != null && _list.PreviousCommand != null && _list.PreviousCommand.CanExecute(null)) _list.PreviousCommand.Execute(null); }
         private void BtnNew_Click(object sender, EventArgs e)
-        { CommitAll(); OnNewRequested(); }
-
+        { 
+            CommitAll(); 
+            OnNewRequested(); 
+        }
         public Func<T> NewRequested; // host can handle creating/adding a new entity
         private async void OnNewRequested() 
         {
@@ -1048,16 +1067,18 @@ namespace FormsDataAccess
 
         private void RefreshButtonsEnabled()
         {
-            bool canSave = false;
-            if (_list != null && _list.SaveCommand != null)
-                canSave = _list.SaveCommand.CanExecute(null);
-            else if (_tracked != null && _tracked.SaveCommand != null)
-                canSave = _tracked.SaveCommand.CanExecute(null);
+            // btnSave handled in RaiseDirtyStateChanged
 
-            if (_btnSave != null) _btnSave.SynchronizedInvoke(() => _btnSave.Enabled = canSave && !HasEditPending);
+            //bool canSave = false;
+            //if (_list != null && _list.SaveCommand != null)
+            //    canSave = _list.SaveCommand.CanExecute(null);
+            //else if (_tracked != null && _tracked.SaveCommand != null)
+            //    canSave = _tracked.SaveCommand.CanExecute(null);
+
+            //if (_btnSave != null) _btnSave.SynchronizedInvoke(() => _btnSave.Enabled = canSave && !HasEditPending);
             if (_btnNext != null) _btnNext.SynchronizedInvoke(() => _btnNext.Enabled = _list != null && _list.NextCommand != null && _list.NextCommand.CanExecute(null));
             if (_btnPrev != null) _btnPrev.SynchronizedInvoke(() => _btnPrev.Enabled = _list != null && _list.PreviousCommand != null && _list.PreviousCommand.CanExecute(null));
-            if (_btnNew != null) _btnNew.SynchronizedInvoke(() => _btnNew.Enabled = true);
+            if (_btnNew != null) _btnNew.SynchronizedInvoke(() => _btnNew.Enabled = _list != null && _tracked != null);
         }
     }
     public sealed class DirtyStateChangedEventArgs : EventArgs
