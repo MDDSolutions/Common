@@ -454,10 +454,9 @@ namespace FormsDataAccess
                     m.Hooks.Add<EventHandler>(h => c.TextChanged += h, h => c.TextChanged -= h, (s, e) => OnTextLikeChanged(m));
                     c.Enabled = !m.PublicSetter;
                 }
-
                 m.Hooks.Add<CancelEventHandler>(h => c.Validating += h, h => c.Validating -= h, (s, e) => OnValidating(m, e));
-
                 m.Hooks.Add<EventHandler>(h => c.Validated += h, h => c.Validated -= h, (s, e) => OnValidated(m));
+                m.Hooks.Add<KeyEventHandler>(h => c.KeyDown += h, h => c.KeyDown -= h, (s, e) => OnControlKeyDown(m, e));
             }
         }
         private void OnValidating(Map m, CancelEventArgs e)
@@ -533,6 +532,52 @@ namespace FormsDataAccess
             //// visuals + dirty signal
             //UpdateVisual(m, false);
             //RaiseDirtyStateChanged();
+        }
+        private void OnControlKeyDown(Map m, KeyEventArgs e)
+        {
+            if (e.KeyCode != Keys.Escape || e.Modifiers != Keys.None) return;
+
+            // Let ComboBox close its drop-down first.
+            if (m.Control is ComboBox cb && cb.DroppedDown) return;
+
+            bool handled = false;
+
+            // 1) Cancel uncommitted edit: revert UI to model and clear pending/error
+            bool hasError = _pendingControls.Contains(m.Control);
+            if (m.HasPendingParsed || hasError)
+            {
+                var modelVal = m.IsObjectBinding ? _entity : (_entity != null ? m.Getter(_entity) : null);
+                SetControlValue(m, modelVal);     // resets text/selection based on model
+                m.HasPendingParsed = false;
+                m.PendingParsedValue = null;
+                m.InEditSession = false;
+                if (hasError) { _pendingControls.Remove(m.Control); _errors?.SetError(m.Control, ""); }
+                UpdateVisual(m);
+                handled = true;
+            }
+            else
+            {
+                // 2) Undo committed change: revert model to original (if dirty)
+                if (!m.IsObjectBinding && _entity != null && _tracked != null &&
+                    _tracked.DirtyProperties.TryGetValue(m.EntityProp, out var dp))
+                {
+                    var original = dp.OldValue;
+                    // update the model → tracker will clear this property from the dirty set
+                    m.Setter(_entity, original);
+                    // reflect in UI (protect from TextChanged loops via ProgrammaticSet inside SetControlValue)
+                    SetControlValue(m, original);
+                    m.InEditSession = false;
+                    UpdateVisual(m);
+                    handled = true;
+                }
+            }
+
+            if (handled)
+            {
+                e.Handled = true;
+                e.SuppressKeyPress = true; // avoid system beep and stop CancelButton
+            }
+            // else: do nothing; Esc will reach the form’s CancelButton if present
         }
 
 
