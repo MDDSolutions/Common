@@ -46,6 +46,9 @@
     <Compile Include="AsyncCommandButton.cs">
       <SubType>Component</SubType>
     </Compile>
+    <Compile Include="ClipboardMonitor.cs">
+      <SubType>Component</SubType>
+    </Compile>
     <Compile Include="ConfigTextBox.cs">
       <SubType>Component</SubType>
     </Compile>
