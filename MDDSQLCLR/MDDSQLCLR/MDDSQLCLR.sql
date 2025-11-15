@@ -33,6 +33,9 @@ GO
 EXEC sys.sp_configure @configname = 'clr strict security', -- varchar(35)
                       @configvalue = 0  -- int
 GO
+EXEC sys.sp_configure @configname = 'clr enabled', -- varchar(35)
+                      @configvalue = 1  -- int
+GO
 RECONFIGURE
 GO
 */
