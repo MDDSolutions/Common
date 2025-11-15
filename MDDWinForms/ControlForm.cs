@@ -24,7 +24,6 @@ namespace MDDWinForms
         {
             InitializeForm(ctl, title);
         }
-
         private void InitializeForm(Control ctl, string title)
         {
             ContainedControl = ctl;
@@ -71,9 +70,7 @@ namespace MDDWinForms
                 }
             }
         }
-
         public bool IgnoreWorkspaceState => false;
-
         public void ApplyWorkspaceState(string state)
         {
             var bounds = Bounds;
@@ -111,7 +108,6 @@ namespace MDDWinForms
             InitializeForm(ctl, parts[0]);
             Bounds = bounds;
         }
-
         public string GetWorkspaceState()
         {
             return $"{Text}|{ContainedControlTypeName}|{ContainedAssemblyName}";
