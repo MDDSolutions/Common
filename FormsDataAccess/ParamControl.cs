@@ -39,7 +39,7 @@ namespace FormsDataAccess
         {
             base.OnCreateControl();
             if (!DesignMode)
-                this.Checked = (bool)DBParameter.GetParamValue(ConfigProperty ?? this.Name);
+                this.Checked = bool.Parse(DBParameter.GetParamValue(ConfigProperty ?? this.Name));
         }
     }
 }

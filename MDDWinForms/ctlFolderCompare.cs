@@ -223,7 +223,7 @@ namespace MDDWinForms
                 var fs = ParseFolderSpec(folder);
                 if (fs != null)
                 {
-                    listinfo.FCList = fs.Item1.GetFiles(fs.Item2 ?? "*.*").Select(x => FCFileInfo.FromFileInfo(x)).ToList();
+                    listinfo.FCList = fs.Item1.GetFiles(fs.Item2 ?? "*.*").Select(x => FCFileInfo.FromFileInfo(x, false)).ToList();
                     listinfo.Updated = DateTime.Now;
                     listinfo.Folder = folder;
                     listinfo.Status.Text = $"{listinfo.FCList.Count} {listinfo.Updated:t}";
@@ -358,12 +358,12 @@ namespace MDDWinForms
                     txtQItems.SynchronizedInvoke(() => txtQItems.Text = $"{taskq.Count}");
                     if (sourcefolderindex == 1 && item.File1 != null)
                     {
-                        tasks.Add(new Tuple<ComparisonResult, Task>(item, item.File1.FileInfo.CopyToAsync(new FileInfo(Path.Combine(lists[2].Folder, item.File1.Name)), true, tokenSource.Token, false, (x) => TaskCallBack(x), TimeSpan.FromMilliseconds(200), (x) => AllowTaskToStart(x))));
+                        tasks.Add(new Tuple<ComparisonResult, Task>(item, item.File1.FileInfo.CopyToAsync_old(new FileInfo(Path.Combine(lists[2].Folder, item.File1.Name)), true, tokenSource.Token, false, (x) => TaskCallBack(x), TimeSpan.FromMilliseconds(200), (x) => AllowTaskToStart(x))));
                         //txtOutput.AppendText($"{DateTime.Now:T}: Started copying {item.File1.Name} 1 -> 2\r\n");
                     }
                     if (sourcefolderindex == 2 && item.File2 != null)
                     {
-                        tasks.Add(new Tuple<ComparisonResult, Task>(item, item.File2.FileInfo.CopyToAsync(new FileInfo(Path.Combine(lists[1].Folder, item.File2.Name)), true, tokenSource.Token, false, (x) => TaskCallBack(x), TimeSpan.FromMilliseconds(200), (x) => AllowTaskToStart(x))));
+                        tasks.Add(new Tuple<ComparisonResult, Task>(item, item.File2.FileInfo.CopyToAsync_old(new FileInfo(Path.Combine(lists[1].Folder, item.File2.Name)), true, tokenSource.Token, false, (x) => TaskCallBack(x), TimeSpan.FromMilliseconds(200), (x) => AllowTaskToStart(x))));
                         //txtOutput.AppendText($"{DateTime.Now:T}: Started copying {item.File2.Name} 2 -> 1\r\n");
                     }
                 }
@@ -375,13 +375,13 @@ namespace MDDWinForms
                     {
                         var fi = new FileInfo(Path.Combine(lists[2].Folder, tp.Item1.File1.Name));
                         if (fi.Exists)
-                            tp.Item1.File2 = FCFileInfo.FromFileInfo(fi);
+                            tp.Item1.File2 = FCFileInfo.FromFileInfo(fi, false);
                     }
                     if (sourcefolderindex == 2)
                     {
                         var fi = new FileInfo(Path.Combine(lists[1].Folder, tp.Item1.File2.Name));
                         if (fi.Exists)
-                            tp.Item1.File1 = FCFileInfo.FromFileInfo(fi);
+                            tp.Item1.File1 = FCFileInfo.FromFileInfo(fi, false);
                     }
                     dgvResult.SynchronizedInvoke(() =>
                     {
@@ -661,10 +661,10 @@ namespace MDDWinForms
             }
         }
         public byte[] Hash { get; set; }
-        public static FCFileInfo FromFileInfo(FileInfo fi)
+        public static FCFileInfo FromFileInfo(FileInfo fi, bool truncatems = true)
         {
             DateTime lastWrite = fi.LastWriteTime;
-            if (lastWrite.Millisecond != 0 && ((fi.Attributes & FileAttributes.ReadOnly) == 0))
+            if (truncatems && lastWrite.Millisecond != 0 && ((fi.Attributes & FileAttributes.ReadOnly) == 0))
             {
                 // Truncate milliseconds
                 DateTime truncated = new DateTime(

@@ -2,6 +2,11 @@
 https://github.com/MDDSolutions/Common/tree/main/MDDSQLCLR
 */
 
+/*
+WHAT DATABASE ARE YOU PUTTING THIS IN?
+*/
+
+
 -- Drop functions if they exist
 IF EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'dbo.RegexMatch') AND type IN (N'FN', N'IF', N'TF', N'FS', N'FT'))
     DROP FUNCTION dbo.RegexMatch;
@@ -38,6 +43,12 @@ EXEC sys.sp_configure @configname = 'clr enabled', -- varchar(35)
 GO
 RECONFIGURE
 GO
+*/
+
+
+
+/*
+WHAT DATABASE ARE YOU PUTTING THIS IN?
 */
 
 -- Create assembly
