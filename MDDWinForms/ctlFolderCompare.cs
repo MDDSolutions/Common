@@ -1,6 +1,7 @@
 ﻿using MDDFoundation;
 using System;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -16,16 +17,34 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using static System.Net.WebRequestMethods;
 using SortOrder = System.Windows.Forms.SortOrder;
+using System.Threading.Channels;
 
 namespace MDDWinForms
 {
     public partial class ctlFolderCompare : UserControl
     {
+        private const int DefaultMaxConcurrentOperations = 2;
+        //private readonly SemaphoreSlim _operationSemaphore;
+        //private readonly ConcurrentQueue<FileOperation> _operationQueue;
+        private int _maxConcurrentOperations = DefaultMaxConcurrentOperations;
+        //private Task _queueProcessorTask;
+        private int _queuedItemCount = 0;
+
+
+        private Channel<FileOperation> _opChannel;
+        //private Task[] _workers;
+        private CancellationTokenSource _queueCts;
+        private readonly ConcurrentDictionary<string, byte> _dedupe = new ConcurrentDictionary<string, byte>(StringComparer.OrdinalIgnoreCase);
+        private readonly object _workerGate = new object();
+        private readonly List<(Task task, CancellationTokenSource stopCts)> _workerPool = new List<(Task, CancellationTokenSource)>();
+
         public ctlFolderCompare()
         {
             InitializeComponent();
             bsTasks.DataSource = monitortasks;
             lbxTasks.DisplayMember = "DisplayText";
+            //_operationSemaphore = new SemaphoreSlim(_maxConcurrentOperations, _maxConcurrentOperations);
+            //_operationQueue = new ConcurrentQueue<FileOperation>();
         }
         private CustomConfiguration Config = null;
         public ctlFolderCompare(CustomConfiguration config, List<string> folders1, List<string> folders2) : this()
@@ -42,10 +61,24 @@ namespace MDDWinForms
             bs2.DataSource = bl2;
             cbxFolder2.DataSource = bs2;
         }
-        private Dictionary<int,ListInfo> lists = new Dictionary<int,ListInfo>();
+
+        public int MaxConcurrentOperations
+        {
+            get => _maxConcurrentOperations;
+            set
+            {
+                if (value < 1) throw new ArgumentOutOfRangeException(nameof(value));
+                _maxConcurrentOperations = value;
+
+                if (_opChannel != null)
+                    EnsureWorkers(_maxConcurrentOperations);
+            }
+        }
+
+        private Dictionary<int, ListInfo> lists = new Dictionary<int, ListInfo>();
         private DisplayContentEnum displayContent = DisplayContentEnum.None;
         private BindingList<MonitorTask> monitortasks = new BindingList<MonitorTask>();
-        private CancellationTokenSource tokenSource = new CancellationTokenSource();
+        //private CancellationTokenSource tokenSource = new CancellationTokenSource();
         public DisplayContentEnum DisplayContent
         {
             get { return displayContent; }
@@ -78,10 +111,10 @@ namespace MDDWinForms
                     var fd1 = li1.FCList.FirstOrDefault()?.Directory;
                     var fd2 = li2.FCList.FirstOrDefault()?.Directory;
                     var u = li1.FCList.Concat(li2.FCList)
-                        .GroupBy(x => x.Name, (name, fg) => new ComparisonResult 
-                        { 
-                            File1 = fg.Where(f => f.Directory == fd1).FirstOrDefault(), 
-                            File2 = fg.Where(f => f.Directory == fd2).FirstOrDefault() 
+                        .GroupBy(x => x.Name, (name, fg) => new ComparisonResult
+                        {
+                            File1 = fg.Where(f => f.Directory == fd1).FirstOrDefault(),
+                            File2 = fg.Where(f => f.Directory == fd2).FirstOrDefault()
                         }, StringComparer.OrdinalIgnoreCase);
                     bsResult.DataSource = u;
                     break;
@@ -100,9 +133,9 @@ namespace MDDWinForms
                     break;
                 case DisplayContentEnum.Folder1:
                     var f1results = li1.FCList
-                                .GroupJoin( li2.FCList, 
-                                            file1 => file1.Name, 
-                                            file2 => file2.Name, 
+                                .GroupJoin(li2.FCList,
+                                            file1 => file1.Name,
+                                            file2 => file2.Name,
                                             (file1, matches) => new { File1 = file1, Matches = matches }, StringComparer.OrdinalIgnoreCase)
                                 .SelectMany(
                                     x => x.Matches.DefaultIfEmpty(),
@@ -147,7 +180,7 @@ namespace MDDWinForms
             if (int.TryParse((sender as Button).Name.Substring(7), out int index))
                 UpdateList(index, (this.Controls[$"cbxFolder{index}"] as ComboBox).Text, true);
         }
-        private Tuple<DirectoryInfo,string> ParseFolderSpec(string f)
+        private Tuple<DirectoryInfo, string> ParseFolderSpec(string f)
         {
             DirectoryInfo di;
             string filter = null;
@@ -161,7 +194,7 @@ namespace MDDWinForms
             {
                 di = new DirectoryInfo(f);
             }
-            if (di.Exists) 
+            if (di.Exists)
                 return new Tuple<DirectoryInfo, string>(di, filter);
             else
                 return null;
@@ -188,9 +221,9 @@ namespace MDDWinForms
                     if (!string.IsNullOrWhiteSpace(part))
                     {
                         if (part.StartsWith("server", StringComparison.OrdinalIgnoreCase))
-                            connstr.DataSource = part.Substring(part.IndexOf('=')+1).Trim();
+                            connstr.DataSource = part.Substring(part.IndexOf('=') + 1).Trim();
                         if (part.StartsWith("database", StringComparison.OrdinalIgnoreCase))
-                            connstr.InitialCatalog = part.Substring(part.IndexOf("=")+1).Trim();
+                            connstr.InitialCatalog = part.Substring(part.IndexOf("=") + 1).Trim();
                         if (part.StartsWith("select", StringComparison.OrdinalIgnoreCase))
                             cmdtext = part;
                     }
@@ -200,13 +233,13 @@ namespace MDDWinForms
                 using (SqlConnection cn = new SqlConnection(connstr.ConnectionString))
                 {
                     cn.Open();
-                    using (SqlCommand cmd = new SqlCommand(cmdtext,cn))
+                    using (SqlCommand cmd = new SqlCommand(cmdtext, cn))
                     {
                         using (SqlDataReader rdr = cmd.ExecuteReader())
                         {
                             listinfo.FCList = new List<FCFileInfo>();
                             listinfo.Updated = DateTime.Now;
-                            listinfo.Folder = folder;   
+                            listinfo.Folder = folder;
                             while (rdr.Read())
                             {
                                 var fi = new FCFileInfo();
@@ -310,9 +343,9 @@ namespace MDDWinForms
                 if (contextitems != null && contextitems.Count > 0)
                 {
                     var cms = new ContextMenuStrip();
-                    cms.Items.Add(new ToolStripMenuItem("Compare Hashes", null, async (s, eh) => await CompareHashes()));
-                    cms.Items.Add(new ToolStripMenuItem("Copy 1 -> 2", null, async (s, eh) => await CopyFiles(1)));
-                    cms.Items.Add(new ToolStripMenuItem("Copy 2 -> 1", null, async (s, eh) => await CopyFiles(2)));
+                    cms.Items.Add(new ToolStripMenuItem("Compare Hashes", null, (s, eh) => CompareHashes()));
+                    cms.Items.Add(new ToolStripMenuItem("Copy 1 -> 2", null, (s, eh) => CopyFiles(1)));
+                    cms.Items.Add(new ToolStripMenuItem("Copy 2 -> 1", null, (s, eh) => CopyFiles(2)));
                     cms.Items.Add(new ToolStripMenuItem("Delete 1", null, (s, eh) => DeleteFiles(1)));
                     cms.Items.Add(new ToolStripMenuItem("Delete 2", null, (s, eh) => DeleteFiles(2)));
                     e.ContextMenuStrip = cms;
@@ -339,176 +372,228 @@ namespace MDDWinForms
             Clipboard.SetText(sb.ToString());
         }
 
-        private async Task CopyFiles(int sourcefolderindex)
+        private void CopyFiles(int sourcefolderindex)
         {
             var list = contextitems.ToList();
-            var taskq = new Queue<ComparisonResult>();
+            var addedCount = 0;
+
             foreach (var item in list)
             {
-                taskq.Enqueue(item);
-            }
-            txtQItems.Text = $"{taskq.Count}";
-            var tasks = new List<Tuple<ComparisonResult, Task>>();
-
-            while(tasks.Count > 0 || taskq.Count > 0)
-            {
-                if (tasks.Count < 2 && taskq.Count > 0)
+                if (sourcefolderindex == 1 && item.File1 != null)
                 {
-                    var item = taskq.Dequeue();
-                    txtQItems.SynchronizedInvoke(() => txtQItems.Text = $"{taskq.Count}");
-                    if (sourcefolderindex == 1 && item.File1 != null)
+                    TryQueueOperation(new CopyFileOperation
                     {
-                        tasks.Add(new Tuple<ComparisonResult, Task>(item, item.File1.FileInfo.CopyToAsync_old(new FileInfo(Path.Combine(lists[2].Folder, item.File1.Name)), true, tokenSource.Token, false, (x) => TaskCallBack(x), TimeSpan.FromMilliseconds(200), (x) => AllowTaskToStart(x))));
-                        //txtOutput.AppendText($"{DateTime.Now:T}: Started copying {item.File1.Name} 1 -> 2\r\n");
-                    }
-                    if (sourcefolderindex == 2 && item.File2 != null)
-                    {
-                        tasks.Add(new Tuple<ComparisonResult, Task>(item, item.File2.FileInfo.CopyToAsync_old(new FileInfo(Path.Combine(lists[1].Folder, item.File2.Name)), true, tokenSource.Token, false, (x) => TaskCallBack(x), TimeSpan.FromMilliseconds(200), (x) => AllowTaskToStart(x))));
-                        //txtOutput.AppendText($"{DateTime.Now:T}: Started copying {item.File2.Name} 2 -> 1\r\n");
-                    }
-                }
-                if (tasks.Count >= 2)
-                {
-                    var t = await Task.WhenAny(tasks.Select(x => x.Item2)).ConfigureAwait(false);
-                    var tp = tasks.FirstOrDefault(x => x.Item2 == t);
-                    if (sourcefolderindex == 1)
-                    {
-                        var fi = new FileInfo(Path.Combine(lists[2].Folder, tp.Item1.File1.Name));
-                        if (fi.Exists)
-                            tp.Item1.File2 = FCFileInfo.FromFileInfo(fi, false);
-                    }
-                    if (sourcefolderindex == 2)
-                    {
-                        var fi = new FileInfo(Path.Combine(lists[1].Folder, tp.Item1.File2.Name));
-                        if (fi.Exists)
-                            tp.Item1.File1 = FCFileInfo.FromFileInfo(fi, false);
-                    }
-                    dgvResult.SynchronizedInvoke(() =>
-                    {
-                        bsResult.ResetBindings(false);
-                        //txtOutput.AppendText($"{DateTime.Now:T}: Finished copying {tp.Item1.Name}\r\n");
+                        SourceFile = item.File1.FileInfo,
+                        DestFile = new FileInfo(Path.Combine(lists[2].Folder, item.File1.Name)),
+                        ComparisonResult = item,
+                        SourceFolderIndex = sourcefolderindex
                     });
-                    tasks.Remove(tp);
+                    addedCount++;
                 }
-                await Task.Delay(10).ConfigureAwait(false);
+                else if (sourcefolderindex == 2 && item.File2 != null)
+                {
+                    TryQueueOperation(new CopyFileOperation
+                    {
+                        SourceFile = item.File2.FileInfo,
+                        DestFile = new FileInfo(Path.Combine(lists[1].Folder, item.File2.Name)),
+                        ComparisonResult = item,
+                        SourceFolderIndex = sourcefolderindex
+                    });
+                    addedCount++;
+                }
             }
 
-
-
-
-            //foreach (var item in list)
-            //{
-            //    if (sourcefolderindex == 1 && item.File1 != null)
-            //    {
-            //        tasks.Add(new Tuple<ComparisonResult, Task>(item, item.File1.FileInfo.CopyToAsync(new FileInfo(Path.Combine(lists[2].Folder, item.File1.Name)), true, tokenSource.Token, false, (x) => TaskCallBack(x), TimeSpan.FromMilliseconds(200), (x) => AllowTaskToStart(x))));
-            //        //txtOutput.AppendText($"{DateTime.Now:T}: Started copying {item.File1.Name} 1 -> 2\r\n");
-            //    }
-            //    if (sourcefolderindex == 2 && item.File2 != null)
-            //    {
-            //        tasks.Add(new Tuple<ComparisonResult, Task>(item, item.File2.FileInfo.CopyToAsync(new FileInfo(Path.Combine(lists[1].Folder, item.File2.Name)), true, tokenSource.Token, false, (x) => TaskCallBack(x), TimeSpan.FromMilliseconds(200), (x) => AllowTaskToStart(x))));
-            //        //txtOutput.AppendText($"{DateTime.Now:T}: Started copying {item.File2.Name} 2 -> 1\r\n");
-            //    }
-            //}
-            //while (tasks.Count > 0)
-            //{
-            //    var t = await Task.WhenAny(tasks.Select(x => x.Item2)).ConfigureAwait(false);
-            //    var tp = tasks.FirstOrDefault(x => x.Item2 == t);
-            //    if (sourcefolderindex == 1)
-            //    {
-            //        var fi = new FileInfo(Path.Combine(lists[2].Folder, tp.Item1.File1.Name));
-            //        if (fi.Exists)
-            //            tp.Item1.File2 = FCFileInfo.FromFileInfo(fi);
-            //    }
-            //    if (sourcefolderindex == 2)
-            //    {
-            //        var fi = new FileInfo(Path.Combine(lists[1].Folder, tp.Item1.File2.Name));
-            //        if (fi.Exists)
-            //            tp.Item1.File1 = FCFileInfo.FromFileInfo(fi);
-            //    }
-            //    dgvResult.SynchronizedInvoke(() =>
-            //    {
-            //        bsResult.ResetBindings(false);
-            //        //txtOutput.AppendText($"{DateTime.Now:T}: Finished copying {tp.Item1.Name}\r\n");
-            //    });
-            //    tasks.Remove(tp);
-            //}
-
+            //Interlocked.Add(ref _queuedItemCount, addedCount);
+            UpdateQueueCount();
+            //EnsureQueueProcessorRunning();
         }
-        private async Task CompareHashes()
+
+        private void CompareHashes()
         {
             var list = contextitems.ToList();
-            var tasks = new List<Tuple<FCFileInfo, Task<byte[]>>>();
+            var addedCount = 0;
+
             foreach (var item in list)
             {
                 if (item.HashesMatch == "ComputeHashes" || item.HashesMatch.StartsWith("NotApplicable"))
                 {
                     if (item.File1 != null && item.File1.Hash == null)
                     {
-                        tasks.Add(new Tuple<FCFileInfo, Task<byte[]>>(item.File1, Foundation.ReadFileHashAsync(item.File1.FileInfo, tokenSource.Token, (x) => TaskCallBack(x), TimeSpan.FromMilliseconds(200), (x) => AllowTaskToStart(x))));
-                        //txtOutput.AppendText($"{DateTime.Now:T}: Started reading hash for {item.File1.Name}\r\n");
+                        TryQueueOperation(new HashFileOperation
+                        {
+                            FileInfo = item.File1
+                        });
+                        addedCount++;
                     }
                     if (item.File2 != null && item.File2.Hash == null)
                     {
-                        tasks.Add(new Tuple<FCFileInfo, Task<byte[]>>(item.File2, Foundation.ReadFileHashAsync(item.File2.FileInfo, tokenSource.Token, (x) => TaskCallBack(x), TimeSpan.FromMilliseconds(200), (x) => AllowTaskToStart(x))));
-                        //txtOutput.AppendText($"{DateTime.Now:T}: Started reading hash for {item.File1.Name}\r\n");
+                        TryQueueOperation(new HashFileOperation
+                        {
+                            FileInfo = item.File2
+                        });
+                        addedCount++;
                     }
                 }
             }
-            while (tasks.Count > 0)
-            {
-                var t = await Task.WhenAny(tasks.Select(x => x.Item2)).ConfigureAwait(false);
-                var tp = tasks.FirstOrDefault(x => x.Item2 == t);
-                if (!tp.Item2.IsCanceled && !tp.Item2.IsFaulted)
-                    tp.Item1.Hash = tp.Item2.Result;
-                dgvResult.SynchronizedInvoke(() =>
-                {
-                    bsResult.ResetBindings(false);
-                    //txtOutput.AppendText($"{DateTime.Now:T}: Finished reading hash for {tp.Item1.Name}\r\n");
-                });
-                tasks.Remove(tp);
-            }
-        }
-        private int runningtasks = 0;
-        private bool AllowTaskToStart(FileCopyProgress progress)
-        {
-            bool retval = false;
 
-            if (runningtasks < 2)
+            //Interlocked.Add(ref _queuedItemCount, addedCount);
+            UpdateQueueCount();
+            //EnsureQueueProcessorRunning();
+        }
+
+        //private void EnsureQueueProcessorRunning()
+        //{
+        //    if (_queueProcessorTask == null || _queueProcessorTask.IsCompleted)
+        //    {
+        //        _queueProcessorTask = Task.Run(() => ProcessOperationQueue());
+        //    }
+        //}
+
+        //private async Task ProcessOperationQueue()
+        //{
+        //    while (!tokenSource.Token.IsCancellationRequested)
+        //    {
+        //        if (_operationQueue.TryDequeue(out FileOperation operation))
+        //        {
+        //            await _operationSemaphore.WaitAsync(tokenSource.Token).ConfigureAwait(false);
+
+        //            var processingTasks = new List<Task>();
+        //            processingTasks.Add(ProcessOperation(operation));
+
+        //            // Try to dequeue additional operations up to the concurrency limit
+        //            for (int i = 1; i < _maxConcurrentOperations; i++)
+        //            {
+        //                if (_operationQueue.TryDequeue(out FileOperation additionalOp))
+        //                {
+        //                    await _operationSemaphore.WaitAsync(tokenSource.Token).ConfigureAwait(false);
+        //                    processingTasks.Add(ProcessOperation(additionalOp));
+        //                }
+        //                else
+        //                {
+        //                    break;
+        //                }
+        //            }
+
+        //            await Task.WhenAll(processingTasks).ConfigureAwait(false);
+        //        }
+        //        else
+        //        {
+        //            // Queue is empty, wait a bit before checking again
+        //            await Task.Delay(100, tokenSource.Token).ConfigureAwait(false);
+        //        }
+        //    }
+        //}
+
+        private async Task ProcessOperation(FileOperation operation)
+        {
+            //var progress = new FileCopyProgress
+            //{
+            //    FileName = operation.FileName,
+            //    OperationComplete = operation.OperationType,
+            //    Queued = false
+            //};
+
+            try
             {
-                if (progress != null)
+                Interlocked.Decrement(ref _queuedItemCount);
+                UpdateQueueCount();
+
+                lbxTasks.SynchronizedInvoke(() =>
                 {
-                    progress.Queued = false;
+                    txtOutput.AppendText($"{DateTime.Now:T}: Started {operation.OperationType} for {operation.FileName}\r\n");
+                });
+
+                if (_queueCts == null || _queueCts.Token.IsCancellationRequested)
+                {
                     lbxTasks.SynchronizedInvoke(() =>
                     {
-                        if (!monitortasks.Any(x => x.Progress == progress))
-                            monitortasks.Add(new MonitorTask { Progress = progress });
-                        txtOutput.AppendText($"{DateTime.Now:T}: Started {progress.OperationComplete} for {progress.FileName}\r\n");
+                        txtOutput.AppendText($"{DateTime.Now:T}: Operation cancelled before start: {operation.OperationType} for {operation.FileName}\r\n");
+                    });
+                    return;
+                }
+
+                if (operation is CopyFileOperation copyOp)
+                {
+                    var result = await copyOp.SourceFile.CopyToAsync(destination:copyOp.DestFile, 
+                        overwrite: true, 
+                        token: _queueCts.Token, 
+                        MoveFile: false,
+                        progresscallback: (p) => TaskCallBack(p), 
+                        progressreportinterval: TimeSpan.FromMilliseconds(200),
+                        computehash: false,
+                        resumable: true,
+                        bufferSize: 1048576,
+                        maxUsage: 1).ConfigureAwait(false);
+
+                    // Update the comparison result with the new file info
+
+                    if (result.IsCompleted)
+                    {
+                        copyOp.DestFile.Refresh();
+                        if (copyOp.SourceFolderIndex == 1)
+                            copyOp.ComparisonResult.File2 = FCFileInfo.FromFileInfo(copyOp.DestFile, false);
+                        else
+                            copyOp.ComparisonResult.File1 = FCFileInfo.FromFileInfo(copyOp.DestFile, false);
+                    }
+
+                    dgvResult.SynchronizedInvoke(() =>
+                    {
+                        bsResult.ResetBindings(false);
                     });
                 }
-                runningtasks += 1;
-                retval = true;
-            }
+                else if (operation is HashFileOperation hashOp)
+                {
+                    var hash = await Foundation.ReadFileHashAsync(hashOp.FileInfo.FileInfo, _queueCts.Token,
+                        (p) => TaskCallBack(p), TimeSpan.FromMilliseconds(200)).ConfigureAwait(false);
 
-            //lbxTasks.SynchronizedInvoke(() =>
-            //{
-            //    if (monitortasks.Where(x => !x.Progress.Queued).Count() < 2)
-            //    {
-            //        if (progress != null)
-            //        {
-            //            progress.Queued = false;
-            //            if (!monitortasks.Any(x => x.Progress == progress))
-            //                monitortasks.Add(new MonitorTask { Progress = progress });
-            //            txtOutput.AppendText($"{DateTime.Now:T}: Started {progress.OperationComplete} for {progress.FileName}\r\n");
-            //        }
-            //        retval = true;
-            //    }
-            //});
-            return retval;
+                    if (!_queueCts.Token.IsCancellationRequested)
+                    {
+                        hashOp.FileInfo.Hash = hash;
+
+                        dgvResult.SynchronizedInvoke(() =>
+                        {
+                            bsResult.ResetBindings(false);
+                        });
+                    }
+                }
+            }
+            catch (Exception ex) when (ex is OperationCanceledException || ex is TaskCanceledException)
+            {
+                //progress.Cancelled = true;
+            }
+            catch (Exception ex)
+            {
+                lbxTasks.SynchronizedInvoke(() =>
+                {
+                    txtOutput.AppendText($"{DateTime.Now:T}: Error {operation.OperationType} {operation.FileName}: {ex.Message}\r\n");
+                });
+            }
+            finally
+            {
+                //progress.IsCompleted = true;
+                _dedupe.TryRemove(operation.OpKey, out _);
+                lbxTasks.SynchronizedInvoke(() =>
+                {
+                    //var mt = monitortasks.FirstOrDefault(x => x.Progress == progress);
+                    //if (mt != null)
+                    //{
+                    //    monitortasks.Remove(mt);
+                    //}
+                    txtOutput.AppendText($"{DateTime.Now:T}: Finished {operation.OperationType} for {operation.FileName}\r\n");
+                });
+                //_operationSemaphore.Release();
+            }
         }
+
+        private void UpdateQueueCount()
+        {
+            txtQItems.SynchronizedInvoke(() => txtQItems.Text = $"{_queuedItemCount}");
+        }
+
         private void rb_CheckedChanged(object sender, EventArgs e)
         {
             var rb = sender as RadioButton;
-            if (rb != null && rb.Checked) DisplayContent = (DisplayContentEnum) Enum.Parse(typeof(DisplayContentEnum), rb.Name.Substring(2));
+            if (rb != null && rb.Checked) DisplayContent = (DisplayContentEnum)Enum.Parse(typeof(DisplayContentEnum), rb.Name.Substring(2));
         }
         private void removeToolStripMenuItem_Click(object sender, EventArgs e)
         {
@@ -578,38 +663,239 @@ namespace MDDWinForms
             }
 
         }
-        private void btnCancel_Click(object sender, EventArgs e)
+        private async void btnCancel_Click(object sender, EventArgs e)
         {
-            if (tokenSource != null) { tokenSource.Cancel(); }
+            await ResetQueueAsync(cancelInFlight: true);
         }
         private void tmrMain_Tick(object sender, EventArgs e)
         {
             lbxTasks.SynchronizedInvoke(() =>
             {
                 if (btnCancel.Enabled != monitortasks.Count > 0) btnCancel.Enabled = !btnCancel.Enabled;
+                var now = Environment.TickCount;
+                for (int i = monitortasks.Count - 1; i >= 0; i--)
+                {
+                    if (monitortasks[i].RemoveAt < now)
+                    {
+                        monitortasks.RemoveAt(i);
+                    }
+                }
             });
         }
         private void TaskCallBack(FileCopyProgress progress)
         {
             lbxTasks.SynchronizedInvoke(() =>
             {
-                var mt = monitortasks.Where(x => x.Progress == progress).FirstOrDefault();  
+                var mt = monitortasks.Where(x => x.Progress == progress).FirstOrDefault();
                 if (mt == null)
-                    monitortasks.Add(new MonitorTask { Progress = progress });
-                else if (progress.PercentComplete == 1 || progress.Cancelled)
                 {
-                    runningtasks -= 1;
-                    monitortasks.Remove(mt);
-                    txtOutput.AppendText($"{DateTime.Now:T}: {progress}\r\n");
+                    if (progress.Cancelled || progress.IsCompleted) return;
+                    mt = new MonitorTask { Progress = progress };
+                    monitortasks.Add(mt);
                 }
-                else
+                if (progress.Cancelled || progress.IsCompleted)
                 {
-                    bsTasks.ResetBindings(false);
-                }
+                    mt.RemoveAt = Environment.TickCount + 10000; // show completed/ cancelled for 10 seconds
+                    //monitortasks.Remove(mt);
+                }   
+                bsTasks.ResetBindings(false);
             });
         }
+
+
+        private void StartQueue()
+        {
+            if (_opChannel != null)
+                return; // already started
+
+            _queueCts?.Dispose();
+            _queueCts = new CancellationTokenSource();
+
+            _opChannel = Channel.CreateUnbounded<FileOperation>(new UnboundedChannelOptions
+            {
+                SingleWriter = false,
+                SingleReader = false,
+                AllowSynchronousContinuations = false
+            });
+
+            EnsureWorkers(_maxConcurrentOperations);
+        }
+
+        private async Task WorkerLoop(int workerId, CancellationToken retireToken)
+        {
+            try
+            {
+                while (true)
+                {
+                    // Wait for work OR retirement. If retired while idle, exit.
+                    if (!await _opChannel.Reader.WaitToReadAsync(retireToken).ConfigureAwait(false))
+                        return;
+
+                    // Drain available work
+                    while (_opChannel.Reader.TryRead(out var op))
+                    {
+                        await ProcessOperation(op).ConfigureAwait(false);
+
+                        // If we were asked to retire, we retire AFTER finishing current job.
+                        if (retireToken.IsCancellationRequested)
+                            return;
+                    }
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                // normal retirement while idle
+            }
+        }
+        private void EnsureWorkers(int desiredCount)
+        {
+            if (_opChannel == null) return;
+
+            lock (_workerGate)
+            {
+                while (_workerPool.Count < desiredCount)
+                {
+                    var stopCts = new CancellationTokenSource();
+                    var idx = _workerPool.Count;
+                    var task = Task.Run(() => WorkerLoop(idx, stopCts.Token));
+                    _workerPool.Add((task, stopCts));
+                }
+
+                while (_workerPool.Count > desiredCount)
+                {
+                    var last = _workerPool[_workerPool.Count - 1];
+                    last.stopCts.Cancel();
+                    _workerPool.RemoveAt(_workerPool.Count - 1);
+                }
+            }
+        }
+        private bool TryQueueOperation(FileOperation op)
+        {
+            // If StartQueue hasn’t been called yet, do it lazily.
+            if (_opChannel == null) StartQueue();
+
+            var key = op.OpKey;
+            if (!_dedupe.TryAdd(key, 0))
+            {
+                // already queued or processing
+                return false;
+            }
+
+            var written = _opChannel.Writer.TryWrite(op);
+            if (written)
+            {
+                Interlocked.Increment(ref _queuedItemCount);
+                UpdateQueueCount();
+            }
+            else
+            {
+                // This should never happen with an unbounded channel, but handle it just in case.
+                _dedupe.TryRemove(key, out _);
+            }
+            return written;
+        }
+        private async Task ResetQueueAsync(bool cancelInFlight)
+        {
+            // Snapshot old state so we can shut it down safely
+            Channel<FileOperation> oldChannel = _opChannel;
+            CancellationTokenSource oldQueueCts = _queueCts;
+
+            List<(Task task, CancellationTokenSource stopCts)> oldWorkers;
+            lock (_workerGate)
+            {
+                oldWorkers = _workerPool.ToList();
+                _workerPool.Clear();
+            }
+
+            // 1) Stop accepting new work on the old channel (optional but nice)
+            try { oldChannel?.Writer.TryComplete(); } catch { }
+
+            // 2) Retire workers (they’ll stop when idle; canceling in-flight ops helps them reach idle)
+            foreach (var w in oldWorkers)
+            {
+                try { w.stopCts.Cancel(); } catch { }
+            }
+
+            // 3) Cancel in-flight file ops (copy/hash) if requested
+            if (cancelInFlight)
+            {
+                try { oldQueueCts?.Cancel(); } catch { }
+            }
+
+            // 4) Await worker exit (non-blocking UI because we await)
+            try
+            {
+                await Task.WhenAll(oldWorkers.Select(w => w.task)).ConfigureAwait(true);
+            }
+            catch { /* swallow cancellation and any shutdown noise */ }
+
+            // 5) Dispose old tokens
+            try { oldQueueCts?.Dispose(); } catch { }
+            foreach (var w in oldWorkers)
+            {
+                try { w.stopCts.Dispose(); } catch { }
+            }
+
+            // 6) Clear dedupe + queued count + visible task list
+            _dedupe.Clear();
+            Interlocked.Exchange(ref _queuedItemCount, 0);
+
+            // Important: also clear any in-progress UI items
+            lbxTasks.SynchronizedInvoke(() =>
+            {
+                monitortasks.Clear();
+                bsTasks.ResetBindings(false);
+            });
+            UpdateQueueCount();
+
+            // 7) Drop the old channel entirely (this is what “clears the queue”)
+            _opChannel = null;
+            _queueCts = null;
+        }
+
+        private void txtConcurrentOperations_Validating(object sender, CancelEventArgs e)
+        {
+            if (int.TryParse(txtConcurrentOperations.Text, out int newCount) && newCount > 0)
+            {
+                MaxConcurrentOperations = newCount;
+            }
+            else
+            {
+                MessageBox.Show("Please enter a valid positive integer for concurrent operations.");
+                e.Cancel = true;
+            }
+        }
     }
-    public class ComparisonResult 
+
+    public abstract class FileOperation
+    {
+        public abstract string FileName { get; }
+        public abstract string OperationType { get; }
+        public abstract string OpKey { get; }
+    }
+
+    public class CopyFileOperation : FileOperation
+    {
+        public FileInfo SourceFile { get; set; }
+        public FileInfo DestFile { get; set; }
+        public ComparisonResult ComparisonResult { get; set; }
+        public int SourceFolderIndex { get; set; }
+
+        public override string FileName => SourceFile?.Name;
+        public override string OperationType => "Copy";
+        public override string OpKey => $"C|{SourceFile?.FullName ?? ""}|{DestFile?.FullName ?? ""}";
+    }
+
+    public class HashFileOperation : FileOperation
+    {
+        public FCFileInfo FileInfo { get; set; }
+
+        public override string FileName => FileInfo?.Name;
+        public override string OperationType => "Hash";
+        public override string OpKey => $"H|{FileInfo?.FileInfo?.FullName ?? FileInfo?.Name ?? ""}";
+    }
+
+    public class ComparisonResult
     {
         public string Name { get => File1?.Name ?? File2?.Name; }
         public string Path1 { get => File1?.Directory; }
@@ -726,6 +1012,7 @@ namespace MDDWinForms
     public class MonitorTask
     {
         public FileCopyProgress Progress { get; set; }
+        public long RemoveAt { get; set; } = long.MaxValue;
         public string DisplayText { get => Progress.ToString(); }
     }
 }
