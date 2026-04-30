@@ -121,9 +121,7 @@
     <Compile Include="frmImageEdit.Designer.cs">
       <DependentUpon>frmImageEdit.cs</DependentUpon>
     </Compile>
-    <Compile Include="frmInput.cs">
-      <SubType>Form</SubType>
-    </Compile>
+    <Compile Include="frmInput.cs" />
     <Compile Include="frmInput.Designer.cs">
       <DependentUpon>frmInput.cs</DependentUpon>
     </Compile>
