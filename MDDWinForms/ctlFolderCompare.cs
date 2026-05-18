@@ -514,15 +514,16 @@ namespace MDDWinForms
 
                 if (operation is CopyFileOperation copyOp)
                 {
-                    var result = await copyOp.SourceFile.CopyToAsync(destination:copyOp.DestFile, 
+                    var result = await copyOp.SourceFile.CopyToAsync(
+                        destination:copyOp.DestFile, 
                         overwrite: true, 
                         token: _queueCts.Token, 
                         MoveFile: false,
-                        progresscallback: (p) => TaskCallBack(p), 
+                        progresscallback: TaskCallBack, 
                         progressreportinterval: TimeSpan.FromMilliseconds(200),
-                        computehash: false,
+                        hashmode: FileCopyHashMode.FastNativeHashWithResumeReread,
                         resumable: true,
-                        bufferSize: 1048576,
+                        profile: FileCopyProfile.Auto,
                         maxUsage: 1).ConfigureAwait(false);
 
                     // Update the comparison result with the new file info
