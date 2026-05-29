@@ -815,7 +815,11 @@ namespace MDDWinForms
         public static Image ByteArrayToImage(byte[] byteArrayIn)
         {
             if (byteArrayIn == null) return null;
-            return Image.FromStream(new MemoryStream(byteArrayIn));
+            using (var ms = new MemoryStream(byteArrayIn))
+            using (var image = Image.FromStream(ms))
+            {
+                return new Bitmap(image);
+            }
         }
     }
     public enum DpiAwareness

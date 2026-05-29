@@ -15,11 +15,14 @@
         {
             try
             {
-                if (disposing && (components != null))
+                if (disposing)
                 {
-                    components.Dispose();
+                    Reset();
+                    if (components != null)
+                    {
+                        components.Dispose();
+                    }
                 }
-                Reset();
                 base.Dispose(disposing);
             }
             catch { }

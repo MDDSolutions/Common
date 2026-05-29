@@ -46,19 +46,23 @@ namespace MDDWinForms
         private bool showtextbox;
         private bool sizetoimage;
         private bool selected;
+        private readonly List<ToolStripItem> dynamicMenuItems = new List<ToolStripItem>();
         public virtual void Reset()
         {
             highlighthickness = 0;
             highlightcolor = Color.Yellow;
             showtextbox = true;
             sizetoimage = true;
-            pbx.Image?.Dispose();
+            ClearDynamicMenuItems();
+            var image = pbx.Image;
             pbx.Image = null;
+            image?.Dispose();
             txt.Text = null;
             selected = false;
             tsmSelect.Text = "Select";
             SelectionChanged = null;
             PictureBoxClicked = null;
+            GetMenuItems = null;
             refreshall(AppDefaultSize);
         }
         #endregion
@@ -164,16 +168,18 @@ namespace MDDWinForms
                     refreshall(img.Size);
                 }
             }
-            pbx.Image?.Dispose();
+            var previousImage = pbx.Image;
+            pbx.Image = null;
+            previousImage?.Dispose();
             pbx.Image = img;
         }
         public void SetImage(byte[] ImageData, bool withresize = true)
         {
             if (ImageData == null) throw new ArgumentNullException("PictureBoxWithTextBox - image data is null");
             using (var ms = new System.IO.MemoryStream(ImageData))
+            using (var img = Image.FromStream(ms))
             {
-                var img = Image.FromStream(ms);
-                SetImage(img, withresize);
+                SetImage(new Bitmap(img), withresize);
             }
         }
         public void SetText(string text, bool strict = true)
@@ -190,7 +196,16 @@ namespace MDDWinForms
         }
         public virtual void ContextMenuOpening(object sender, CancelEventArgs e)
         {
-            if (GetMenuItems != null) cms.Items.AddRange(GetMenuItems.Invoke());
+            ClearDynamicMenuItems();
+            if (GetMenuItems != null)
+            {
+                var items = GetMenuItems.Invoke()?.Where(item => item != null).ToArray();
+                if (items != null && items.Length > 0)
+                {
+                    cms.Items.AddRange(items);
+                    dynamicMenuItems.AddRange(items);
+                }
+            }
         }
         #endregion
 
@@ -231,12 +246,21 @@ namespace MDDWinForms
             if (highlighthickness > 0)
             {
                 using (var gfx = CreateGraphics())
+                using (var pen = new Pen(highlightcolor, highlighthickness))
                 {
-                    var pen = new Pen(highlightcolor, highlighthickness);
                     var thickmid = Convert.ToSingle(highlighthickness) / 2;
                     gfx.DrawRectangle(pen, thickmid, thickmid, Width - highlighthickness, Height - highlighthickness);
                 }
             }
+        }
+        private void ClearDynamicMenuItems()
+        {
+            foreach (var item in dynamicMenuItems)
+            {
+                cms.Items.Remove(item);
+                item.Dispose();
+            }
+            dynamicMenuItems.Clear();
         }
         private void tsmSelect_Click(object sender, EventArgs e)
         {
