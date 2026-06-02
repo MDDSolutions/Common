@@ -153,20 +153,69 @@ namespace MDDWinForms
         private Rectangle theRectangle = new Rectangle(new Point(0, 0), new Size(0, 0));
         private Rectangle BackupScreenRectangle = new Rectangle(0, 0, 0, 0);
         private Point startPoint;
+        private RectangleDragMode dragMode = RectangleDragMode.None;
+        private RectangleMoveAxis moveAxis = RectangleMoveAxis.None;
+        private bool moveAxisLocksOnFirstMove = false;
+        private Point moveStartImagePoint;
+        private Rectangle moveStartRectangle;
+
+        private enum RectangleDragMode
+        {
+            None,
+            Draw,
+            Move
+        }
+
+        private enum RectangleMoveAxis
+        {
+            None,
+            Horizontal,
+            Vertical
+        }
+
         private void pbx_MouseDown(object sender, MouseEventArgs e)
         {
-            if (e.Button == MouseButtons.Left)
+            if (e.Button != MouseButtons.Left)
             {
-                isDrag = true;
+                return;
             }
+
             var control = (Control)sender;
             startPoint = control.PointToScreen(new Point(e.X, e.Y));
+
+            if (CanMoveRectangleFromPoint(new Point(e.X, e.Y)))
+            {
+                isDrag = true;
+                dragMode = RectangleDragMode.Move;
+                moveAxis = RectangleMoveAxis.None;
+                moveAxisLocksOnFirstMove = (ModifierKeys & Keys.Shift) == Keys.Shift;
+                moveStartImagePoint = ClientPointToImagePoint(new Point(e.X, e.Y));
+                moveStartRectangle = theRectangle;
+                BackupScreenRectangle = new Rectangle(0, 0, 0, 0);
+                pbx.Cursor = Cursors.SizeAll;
+                return;
+            }
+
+            isDrag = true;
+            dragMode = RectangleDragMode.Draw;
         }
 
         private Rectangle DashedRect = new Rectangle(0, 0, 0, 0);
         private void pbx_MouseMove(object sender, MouseEventArgs e)
         {
-            if (isDrag)
+            if (!isDrag)
+            {
+                pbx.Cursor = CanMoveRectangleFromPoint(new Point(e.X, e.Y)) ? Cursors.SizeAll : Cursors.Default;
+                return;
+            }
+
+            if (dragMode == RectangleDragMode.Move)
+            {
+                MoveRectangleToPoint(new Point(e.X, e.Y));
+                return;
+            }
+
+            if (dragMode == RectangleDragMode.Draw)
             {
                 ControlPaint.DrawReversibleFrame(DashedRect, this.BackColor, FrameStyle.Dashed);
 
@@ -191,9 +240,25 @@ namespace MDDWinForms
             isDrag = false;
             DashedRect = new Rectangle(0, 0, 0, 0);
 
+            if (dragMode == RectangleDragMode.Move)
+            {
+                dragMode = RectangleDragMode.None;
+                moveAxis = RectangleMoveAxis.None;
+                moveAxisLocksOnFirstMove = false;
+                pbx.Cursor = CanMoveRectangleFromPoint(new Point(e.X, e.Y)) ? Cursors.SizeAll : Cursors.Default;
+                return;
+            }
+
+            if (dragMode != RectangleDragMode.Draw)
+            {
+                dragMode = RectangleDragMode.None;
+                return;
+            }
+
+            dragMode = RectangleDragMode.None;
             theRectangle = NormalizeRectangle(theRectangle);
 
-            if (theRectangle.Height > 50 && theRectangle.Width > 50)
+            if (IsUsableSelection(theRectangle))
             {
                 BackupScreenRectangle = new Rectangle(theRectangle.X, theRectangle.Y, theRectangle.Width, theRectangle.Height);
 
@@ -212,6 +277,60 @@ namespace MDDWinForms
             {
                 theRectangle = new Rectangle(0, 0, 0, 0);
             }
+        }
+
+        private bool CanMoveRectangleFromPoint(Point clientPoint)
+        {
+            if (!chkCrop.Checked || theRectangle.IsEmpty || pbx.Image == null)
+                return false;
+
+            return theRectangle.Contains(ClientPointToImagePoint(clientPoint));
+        }
+
+        private bool IsUsableSelection(Rectangle rectangle)
+        {
+            return rectangle.Width > 0 && rectangle.Height > 0 && Math.Max(rectangle.Width, rectangle.Height) > 50;
+        }
+
+        private Point ClientPointToImagePoint(Point clientPoint)
+        {
+            double ratio, xOff, yOff;
+            GetPictureBoxImageScale(out ratio, out xOff, out yOff);
+
+            return new Point(
+                (int)Math.Round((clientPoint.X - xOff) * ratio),
+                (int)Math.Round((clientPoint.Y - yOff) * ratio)
+            );
+        }
+
+        private void MoveRectangleToPoint(Point clientPoint)
+        {
+            var imagePoint = ClientPointToImagePoint(clientPoint);
+            int dx = imagePoint.X - moveStartImagePoint.X;
+            int dy = imagePoint.Y - moveStartImagePoint.Y;
+
+            if (moveAxisLocksOnFirstMove)
+            {
+                if (moveAxis == RectangleMoveAxis.None && (Math.Abs(dx) > 0 || Math.Abs(dy) > 0))
+                {
+                    moveAxis = Math.Abs(dx) >= Math.Abs(dy)
+                        ? RectangleMoveAxis.Horizontal
+                        : RectangleMoveAxis.Vertical;
+                }
+
+                if (moveAxis == RectangleMoveAxis.Horizontal)
+                    dy = 0;
+                else if (moveAxis == RectangleMoveAxis.Vertical)
+                    dx = 0;
+            }
+
+            theRectangle = FitWithinImage(
+                moveStartRectangle.Left + dx,
+                moveStartRectangle.Top + dy,
+                moveStartRectangle.Width,
+                moveStartRectangle.Height
+            );
+            SetImage();
         }
 
         private double GetTargetAspectRatio()
