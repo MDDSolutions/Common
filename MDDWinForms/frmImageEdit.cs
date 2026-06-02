@@ -128,7 +128,7 @@ namespace MDDWinForms
         {
             if (!theRectangle.IsEmpty) return theRectangle;
 
-            int width = Img.Height / 200 * 170;
+            int width = Math.Min(Img.Width, (int)Math.Round(Img.Height * GetTargetAspectRatio()));
             int left = (Img.Width - width) / 2;
             return new Rectangle(left + HorizontalOffset, 0, width, Img.Height);
         }
@@ -191,81 +191,133 @@ namespace MDDWinForms
             isDrag = false;
             DashedRect = new Rectangle(0, 0, 0, 0);
 
-            if (theRectangle.Width < 0)
-            {
-                theRectangle = new Rectangle(theRectangle.X + theRectangle.Width, theRectangle.Y, -theRectangle.Width, theRectangle.Height);
-            }
-            if (theRectangle.Height < 0)
-            {
-                theRectangle = new Rectangle(theRectangle.X, theRectangle.Y + theRectangle.Height, theRectangle.Width, -theRectangle.Height);
-            }
+            theRectangle = NormalizeRectangle(theRectangle);
 
             if (theRectangle.Height > 50 && theRectangle.Width > 50)
             {
                 BackupScreenRectangle = new Rectangle(theRectangle.X, theRectangle.Y, theRectangle.Width, theRectangle.Height);
 
-                while ((double)theRectangle.Width / theRectangle.Height > 0.85)
+                var imageRectangle = ClipToImage(ScreenRectangleToImageRectangle(theRectangle));
+                if (imageRectangle.Width > 0 && imageRectangle.Height > 0)
                 {
-                    theRectangle = new Rectangle(theRectangle.Left, theRectangle.Top - 1, theRectangle.Width, theRectangle.Height + 2);
-                }
-                while ((double)theRectangle.Width / theRectangle.Height < 0.85)
-                {
-                    theRectangle = new Rectangle(theRectangle.Left - 1, theRectangle.Top, theRectangle.Width + 2, theRectangle.Height);
-                }
-
-                theRectangle = pbx.RectangleToClient(theRectangle);
-
-                double ratio, xOff, yOff;
-                if ((double)pbx.Width / pbx.Height < (double)pbx.Image.Width / pbx.Image.Height)
-                {
-                    ratio = (double)pbx.Image.Width / pbx.Width;
-                    xOff = 0;
-                    yOff = (pbx.Height - (pbx.Image.Height / ratio)) / 2;
+                    theRectangle = ExpandToTargetAspectRatio(imageRectangle);
+                    chkCrop.Checked = true;
                 }
                 else
                 {
-                    ratio = (double)pbx.Image.Height / pbx.Height;
-                    xOff = (pbx.Width - (pbx.Image.Width / ratio)) / 2;
-                    yOff = 0;
+                    theRectangle = new Rectangle(0, 0, 0, 0);
                 }
-
-                theRectangle = new Rectangle(
-                    (int)((theRectangle.Left - xOff) * ratio),
-                    (int)((theRectangle.Top - yOff) * ratio),
-                    (int)(theRectangle.Width * ratio),
-                    (int)(theRectangle.Height * ratio)
-                );
-
-                if (theRectangle.Top + theRectangle.Height > pbx.Image.Height)
-                {
-                    theRectangle = new Rectangle(theRectangle.Left, pbx.Image.Height - theRectangle.Height, theRectangle.Width, theRectangle.Height);
-                }
-                if (theRectangle.Left + theRectangle.Width > pbx.Image.Width)
-                {
-                    theRectangle = new Rectangle(pbx.Image.Width - theRectangle.Width, theRectangle.Top, theRectangle.Width, theRectangle.Height);
-                }
-                if (theRectangle.Top < 0)
-                {
-                    theRectangle = new Rectangle(theRectangle.Left, 0, theRectangle.Width, theRectangle.Height);
-                }
-                if (theRectangle.Left < 0)
-                {
-                    theRectangle = new Rectangle(0, theRectangle.Top, theRectangle.Width, theRectangle.Height);
-                }
-                if (theRectangle.Height > pbx.Image.Height)
-                {
-                    theRectangle = new Rectangle(theRectangle.Left, 0, theRectangle.Width, pbx.Image.Height);
-                }
-                if (theRectangle.Width > pbx.Image.Width)
-                {
-                    theRectangle = new Rectangle(0, theRectangle.Top, pbx.Image.Width, theRectangle.Height);
-                }
-                chkCrop.Checked = true;
             }
             else
             {
                 theRectangle = new Rectangle(0, 0, 0, 0);
             }
+        }
+
+        private double GetTargetAspectRatio()
+        {
+            if (ScaleTo != default && ScaleTo.Width > 0 && ScaleTo.Height > 0)
+                return (double)ScaleTo.Width / ScaleTo.Height;
+
+            return 0.85;
+        }
+
+        private Rectangle NormalizeRectangle(Rectangle rectangle)
+        {
+            int left = Math.Min(rectangle.Left, rectangle.Right);
+            int top = Math.Min(rectangle.Top, rectangle.Bottom);
+            int right = Math.Max(rectangle.Left, rectangle.Right);
+            int bottom = Math.Max(rectangle.Top, rectangle.Bottom);
+
+            return Rectangle.FromLTRB(left, top, right, bottom);
+        }
+
+        private Rectangle ScreenRectangleToImageRectangle(Rectangle screenRectangle)
+        {
+            var clientRectangle = pbx.RectangleToClient(screenRectangle);
+            double ratio, xOff, yOff;
+            GetPictureBoxImageScale(out ratio, out xOff, out yOff);
+
+            int left = (int)Math.Floor((clientRectangle.Left - xOff) * ratio);
+            int top = (int)Math.Floor((clientRectangle.Top - yOff) * ratio);
+            int right = (int)Math.Ceiling((clientRectangle.Right - xOff) * ratio);
+            int bottom = (int)Math.Ceiling((clientRectangle.Bottom - yOff) * ratio);
+
+            return Rectangle.FromLTRB(left, top, right, bottom);
+        }
+
+        private void GetPictureBoxImageScale(out double ratio, out double xOff, out double yOff)
+        {
+            if ((double)pbx.Width / pbx.Height < (double)pbx.Image.Width / pbx.Image.Height)
+            {
+                ratio = (double)pbx.Image.Width / pbx.Width;
+                xOff = 0;
+                yOff = (pbx.Height - (pbx.Image.Height / ratio)) / 2;
+            }
+            else
+            {
+                ratio = (double)pbx.Image.Height / pbx.Height;
+                xOff = (pbx.Width - (pbx.Image.Width / ratio)) / 2;
+                yOff = 0;
+            }
+        }
+
+        private Rectangle ClipToImage(Rectangle rectangle)
+        {
+            int left = Math.Max(0, rectangle.Left);
+            int top = Math.Max(0, rectangle.Top);
+            int right = Math.Min(pbx.Image.Width, rectangle.Right);
+            int bottom = Math.Min(pbx.Image.Height, rectangle.Bottom);
+
+            if (right <= left || bottom <= top)
+                return new Rectangle(0, 0, 0, 0);
+
+            return Rectangle.FromLTRB(left, top, right, bottom);
+        }
+
+        private Rectangle ExpandToTargetAspectRatio(Rectangle rectangle)
+        {
+            double aspectRatio = GetTargetAspectRatio();
+            double left = rectangle.Left;
+            double top = rectangle.Top;
+            double width = rectangle.Width;
+            double height = rectangle.Height;
+            double centerX = rectangle.Left + rectangle.Width / 2.0;
+            double centerY = rectangle.Top + rectangle.Height / 2.0;
+
+            if (width >= height)
+            {
+                height = Math.Min(width / aspectRatio, pbx.Image.Height);
+                top = centerY - height / 2.0;
+            }
+            else
+            {
+                width = Math.Min(height * aspectRatio, pbx.Image.Width);
+                left = centerX - width / 2.0;
+            }
+
+            return FitWithinImage(left, top, width, height);
+        }
+
+        private Rectangle FitWithinImage(double left, double top, double width, double height)
+        {
+            width = Math.Min(width, pbx.Image.Width);
+            height = Math.Min(height, pbx.Image.Height);
+
+            if (left < 0) left = 0;
+            if (top < 0) top = 0;
+            if (left + width > pbx.Image.Width) left = pbx.Image.Width - width;
+            if (top + height > pbx.Image.Height) top = pbx.Image.Height - height;
+
+            int finalWidth = Math.Max(1, (int)Math.Round(width));
+            int finalHeight = Math.Max(1, (int)Math.Round(height));
+            int finalLeft = Math.Max(0, (int)Math.Round(left));
+            int finalTop = Math.Max(0, (int)Math.Round(top));
+
+            if (finalLeft + finalWidth > pbx.Image.Width) finalLeft = pbx.Image.Width - finalWidth;
+            if (finalTop + finalHeight > pbx.Image.Height) finalTop = pbx.Image.Height - finalHeight;
+
+            return new Rectangle(finalLeft, finalTop, finalWidth, finalHeight);
         }
 
         private void frmImageEdit_Load(object sender, EventArgs e)

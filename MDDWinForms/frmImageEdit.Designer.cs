@@ -52,9 +52,8 @@
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.pbx.Location = new System.Drawing.Point(0, 0);
-            this.pbx.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
             this.pbx.Name = "pbx";
-            this.pbx.Size = new System.Drawing.Size(1377, 842);
+            this.pbx.Size = new System.Drawing.Size(918, 547);
             this.pbx.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom;
             this.pbx.TabIndex = 0;
             this.pbx.TabStop = false;
@@ -66,10 +65,9 @@
             // 
             this.btnCancel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
             this.btnCancel.DialogResult = System.Windows.Forms.DialogResult.Cancel;
-            this.btnCancel.Location = new System.Drawing.Point(1246, 852);
-            this.btnCancel.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
+            this.btnCancel.Location = new System.Drawing.Point(831, 554);
             this.btnCancel.Name = "btnCancel";
-            this.btnCancel.Size = new System.Drawing.Size(112, 35);
+            this.btnCancel.Size = new System.Drawing.Size(75, 23);
             this.btnCancel.TabIndex = 1;
             this.btnCancel.Text = "Cancel";
             this.btnCancel.UseVisualStyleBackColor = true;
@@ -78,10 +76,9 @@
             // 
             this.btnOK.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
             this.btnOK.DialogResult = System.Windows.Forms.DialogResult.OK;
-            this.btnOK.Location = new System.Drawing.Point(1125, 852);
-            this.btnOK.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
+            this.btnOK.Location = new System.Drawing.Point(750, 554);
             this.btnOK.Name = "btnOK";
-            this.btnOK.Size = new System.Drawing.Size(112, 35);
+            this.btnOK.Size = new System.Drawing.Size(75, 23);
             this.btnOK.TabIndex = 2;
             this.btnOK.Text = "OK";
             this.btnOK.UseVisualStyleBackColor = true;
@@ -90,10 +87,9 @@
             // btnGetFromClipboard
             // 
             this.btnGetFromClipboard.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
-            this.btnGetFromClipboard.Location = new System.Drawing.Point(18, 852);
-            this.btnGetFromClipboard.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
+            this.btnGetFromClipboard.Location = new System.Drawing.Point(12, 554);
             this.btnGetFromClipboard.Name = "btnGetFromClipboard";
-            this.btnGetFromClipboard.Size = new System.Drawing.Size(159, 35);
+            this.btnGetFromClipboard.Size = new System.Drawing.Size(106, 23);
             this.btnGetFromClipboard.TabIndex = 3;
             this.btnGetFromClipboard.Text = "Get From Clipboard";
             this.btnGetFromClipboard.UseVisualStyleBackColor = true;
@@ -102,20 +98,18 @@
             // txtIncrement
             // 
             this.txtIncrement.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
-            this.txtIncrement.Location = new System.Drawing.Point(356, 857);
-            this.txtIncrement.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
+            this.txtIncrement.Location = new System.Drawing.Point(237, 557);
             this.txtIncrement.Name = "txtIncrement";
-            this.txtIncrement.Size = new System.Drawing.Size(36, 26);
+            this.txtIncrement.Size = new System.Drawing.Size(25, 20);
             this.txtIncrement.TabIndex = 4;
             this.txtIncrement.Text = "5";
             // 
             // btnLeft
             // 
             this.btnLeft.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
-            this.btnLeft.Location = new System.Drawing.Point(402, 852);
-            this.btnLeft.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
+            this.btnLeft.Location = new System.Drawing.Point(268, 554);
             this.btnLeft.Name = "btnLeft";
-            this.btnLeft.Size = new System.Drawing.Size(78, 35);
+            this.btnLeft.Size = new System.Drawing.Size(52, 23);
             this.btnLeft.TabIndex = 6;
             this.btnLeft.Text = "Left";
             this.btnLeft.UseVisualStyleBackColor = true;
@@ -124,10 +118,9 @@
             // btnRight
             // 
             this.btnRight.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
-            this.btnRight.Location = new System.Drawing.Point(489, 852);
-            this.btnRight.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
+            this.btnRight.Location = new System.Drawing.Point(326, 554);
             this.btnRight.Name = "btnRight";
-            this.btnRight.Size = new System.Drawing.Size(78, 35);
+            this.btnRight.Size = new System.Drawing.Size(52, 23);
             this.btnRight.TabIndex = 7;
             this.btnRight.Text = "Right";
             this.btnRight.UseVisualStyleBackColor = true;
@@ -136,10 +129,9 @@
             // btnCrop
             // 
             this.btnCrop.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnCrop.Location = new System.Drawing.Point(1004, 852);
-            this.btnCrop.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
+            this.btnCrop.Location = new System.Drawing.Point(669, 554);
             this.btnCrop.Name = "btnCrop";
-            this.btnCrop.Size = new System.Drawing.Size(112, 35);
+            this.btnCrop.Size = new System.Drawing.Size(75, 23);
             this.btnCrop.TabIndex = 8;
             this.btnCrop.Text = "Crop";
             this.btnCrop.UseVisualStyleBackColor = true;
@@ -149,10 +141,9 @@
             // 
             this.chkCrop.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
             this.chkCrop.AutoSize = true;
-            this.chkCrop.Location = new System.Drawing.Point(186, 862);
-            this.chkCrop.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
+            this.chkCrop.Location = new System.Drawing.Point(124, 559);
             this.chkCrop.Name = "chkCrop";
-            this.chkCrop.Size = new System.Drawing.Size(158, 24);
+            this.chkCrop.Size = new System.Drawing.Size(107, 17);
             this.chkCrop.TabIndex = 9;
             this.chkCrop.Text = "Crop - Increment:";
             this.chkCrop.UseVisualStyleBackColor = true;
@@ -166,45 +157,53 @@
             // 
             // Label1
             // 
+            this.Label1.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
             this.Label1.AutoSize = true;
-            this.Label1.Location = new System.Drawing.Point(616, 862);
+            this.Label1.Location = new System.Drawing.Point(411, 560);
+            this.Label1.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.Label1.Name = "Label1";
-            this.Label1.Size = new System.Drawing.Size(90, 20);
+            this.Label1.Size = new System.Drawing.Size(61, 13);
             this.Label1.TabIndex = 10;
             this.Label1.Text = "DPI Factor:";
             // 
             // txtDPIFactor
             // 
-            this.txtDPIFactor.Location = new System.Drawing.Point(712, 859);
+            this.txtDPIFactor.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+            this.txtDPIFactor.Location = new System.Drawing.Point(475, 558);
+            this.txtDPIFactor.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
             this.txtDPIFactor.Name = "txtDPIFactor";
-            this.txtDPIFactor.Size = new System.Drawing.Size(69, 26);
+            this.txtDPIFactor.Size = new System.Drawing.Size(47, 20);
             this.txtDPIFactor.TabIndex = 11;
             this.txtDPIFactor.Text = "0";
             this.txtDPIFactor.TextChanged += new System.EventHandler(this.txtDPIFactor_TextChanged);
             // 
             // txtXOffset
             // 
-            this.txtXOffset.Location = new System.Drawing.Point(893, 859);
+            this.txtXOffset.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+            this.txtXOffset.Location = new System.Drawing.Point(595, 558);
+            this.txtXOffset.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
             this.txtXOffset.Name = "txtXOffset";
-            this.txtXOffset.Size = new System.Drawing.Size(69, 26);
+            this.txtXOffset.Size = new System.Drawing.Size(47, 20);
             this.txtXOffset.TabIndex = 13;
             this.txtXOffset.Text = "0";
             this.txtXOffset.TextChanged += new System.EventHandler(this.txtXOffset_TextChanged);
             // 
             // Label2
             // 
+            this.Label2.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
             this.Label2.AutoSize = true;
-            this.Label2.Location = new System.Drawing.Point(797, 862);
+            this.Label2.Location = new System.Drawing.Point(531, 560);
+            this.Label2.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.Label2.Name = "Label2";
-            this.Label2.Size = new System.Drawing.Size(72, 20);
+            this.Label2.Size = new System.Drawing.Size(48, 13);
             this.Label2.TabIndex = 12;
             this.Label2.Text = "X Offset:";
             // 
             // frmImageEdit
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(9F, 20F);
+            this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(1377, 906);
+            this.ClientSize = new System.Drawing.Size(918, 589);
             this.Controls.Add(this.txtXOffset);
             this.Controls.Add(this.Label2);
             this.Controls.Add(this.txtDPIFactor);
@@ -218,7 +217,6 @@
             this.Controls.Add(this.btnOK);
             this.Controls.Add(this.btnCancel);
             this.Controls.Add(this.pbx);
-            this.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
             this.Name = "frmImageEdit";
             this.Text = "Image Edit";
             this.Load += new System.EventHandler(this.frmImageEdit_Load);
