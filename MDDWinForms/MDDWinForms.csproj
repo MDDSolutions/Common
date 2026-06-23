@@ -33,23 +33,8 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Microsoft.Bcl.AsyncInterfaces">
-      <HintPath>$(PkgMicrosoft_Bcl_AsyncInterfaces)\lib\net462\Microsoft.Bcl.AsyncInterfaces.dll</HintPath>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
-    <Reference Include="System.Runtime.CompilerServices.Unsafe">
-      <HintPath>$(PkgSystem_Runtime_CompilerServices_Unsafe)\lib\net462\System.Runtime.CompilerServices.Unsafe.dll</HintPath>
-    </Reference>
-    <Reference Include="System.Resources.Extensions">
-      <HintPath>$(PkgSystem_Resources_Extensions)\lib\net462\System.Resources.Extensions.dll</HintPath>
-    </Reference>
-    <Reference Include="System.Threading.Channels">
-      <HintPath>$(PkgSystem_Threading_Channels)\lib\net462\System.Threading.Channels.dll</HintPath>
-    </Reference>
-    <Reference Include="System.Threading.Tasks.Extensions">
-      <HintPath>$(PkgSystem_Threading_Tasks_Extensions)\lib\net462\System.Threading.Tasks.Extensions.dll</HintPath>
-    </Reference>
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
