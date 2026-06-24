@@ -1125,20 +1125,18 @@ namespace FormsDataAccess
             {
                 try 
                 { 
-                    await _list.SaveCommand.ExecuteAsync(null);
-                    //if (_list != null && (_tracked == null || _tracked != _list.CurrentTracked))
-                    //{
-                    //    _tracked = _list.CurrentTracked;
-                    //    OnListCurrentChanged();
-                    //}
-                    //RaiseDirtyStateChanged(null);
-                    //UpdateAllVisuals();
+                    if (await _list.SaveCommand.ExecuteAsync(null))
+                        UpdateAllVisuals();
                 }
                 catch { /* surfaced via TrackedListError */ }
             }
             else if (_tracked != null && _tracked.SaveCommand != null && _tracked.SaveCommand.CanExecute(null))
             {
-                try { await ((AsyncDbCommand)_tracked.SaveCommand).ExecuteAsync(null); }
+                try
+                {
+                    if (await ((AsyncDbCommand)_tracked.SaveCommand).ExecuteAsync(null))
+                        UpdateAllVisuals();
+                }
                 catch { }
             }
             RefreshButtonsEnabled();
