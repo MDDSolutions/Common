@@ -44,6 +44,23 @@
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml" />
   </ItemGroup>
+  <ItemGroup Condition=" '$(MSBuildRuntimeType)' == 'Core' ">
+    <Reference Include="Microsoft.Bcl.AsyncInterfaces">
+      <HintPath>$(PkgMicrosoft_Bcl_AsyncInterfaces)\lib\net462\Microsoft.Bcl.AsyncInterfaces.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Resources.Extensions">
+      <HintPath>$(PkgSystem_Resources_Extensions)\lib\net462\System.Resources.Extensions.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Runtime.CompilerServices.Unsafe">
+      <HintPath>$(PkgSystem_Runtime_CompilerServices_Unsafe)\lib\net462\System.Runtime.CompilerServices.Unsafe.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Threading.Channels">
+      <HintPath>$(PkgSystem_Threading_Channels)\lib\net462\System.Threading.Channels.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Threading.Tasks.Extensions">
+      <HintPath>$(PkgSystem_Threading_Tasks_Extensions)\lib\net462\System.Threading.Tasks.Extensions.dll</HintPath>
+    </Reference>
+  </ItemGroup>
   <ItemGroup>
     <Compile Include="AsyncCommandButton.cs">
       <SubType>Component</SubType>
