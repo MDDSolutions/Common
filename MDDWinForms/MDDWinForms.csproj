@@ -44,7 +44,7 @@
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml" />
   </ItemGroup>
-  <ItemGroup Condition=" '$(MSBuildRuntimeType)' == 'Core' ">
+  <ItemGroup Condition=" '$(MSBuildRuntimeType)' == 'Core' And '$(DesignTimeBuild)' != 'true' ">
     <Reference Include="Microsoft.Bcl.AsyncInterfaces">
       <HintPath>$(PkgMicrosoft_Bcl_AsyncInterfaces)\lib\net462\Microsoft.Bcl.AsyncInterfaces.dll</HintPath>
     </Reference>
