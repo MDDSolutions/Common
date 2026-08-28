@@ -45,19 +45,19 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup Condition=" '$(MSBuildRuntimeType)' == 'Core' And '$(DesignTimeBuild)' != 'true' ">
-    <Reference Include="Microsoft.Bcl.AsyncInterfaces">
+    <Reference Include="Microsoft.Bcl.AsyncInterfaces" Condition="Exists('$(PkgMicrosoft_Bcl_AsyncInterfaces)\lib\net462\Microsoft.Bcl.AsyncInterfaces.dll')">
       <HintPath>$(PkgMicrosoft_Bcl_AsyncInterfaces)\lib\net462\Microsoft.Bcl.AsyncInterfaces.dll</HintPath>
     </Reference>
-    <Reference Include="System.Resources.Extensions">
+    <Reference Include="System.Resources.Extensions" Condition="Exists('$(PkgSystem_Resources_Extensions)\lib\net462\System.Resources.Extensions.dll')">
       <HintPath>$(PkgSystem_Resources_Extensions)\lib\net462\System.Resources.Extensions.dll</HintPath>
     </Reference>
-    <Reference Include="System.Runtime.CompilerServices.Unsafe">
+    <Reference Include="System.Runtime.CompilerServices.Unsafe" Condition="Exists('$(PkgSystem_Runtime_CompilerServices_Unsafe)\lib\net462\System.Runtime.CompilerServices.Unsafe.dll')">
       <HintPath>$(PkgSystem_Runtime_CompilerServices_Unsafe)\lib\net462\System.Runtime.CompilerServices.Unsafe.dll</HintPath>
     </Reference>
-    <Reference Include="System.Threading.Channels">
+    <Reference Include="System.Threading.Channels" Condition="Exists('$(PkgSystem_Threading_Channels)\lib\net462\System.Threading.Channels.dll')">
       <HintPath>$(PkgSystem_Threading_Channels)\lib\net462\System.Threading.Channels.dll</HintPath>
     </Reference>
-    <Reference Include="System.Threading.Tasks.Extensions">
+    <Reference Include="System.Threading.Tasks.Extensions" Condition="Exists('$(PkgSystem_Threading_Tasks_Extensions)\lib\net462\System.Threading.Tasks.Extensions.dll')">
       <HintPath>$(PkgSystem_Threading_Tasks_Extensions)\lib\net462\System.Threading.Tasks.Extensions.dll</HintPath>
     </Reference>
   </ItemGroup>
