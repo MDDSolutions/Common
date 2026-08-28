@@ -247,10 +247,10 @@
     <None Include="Properties\DataSources\WindowState.datasource" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="10.0.3" GeneratePathProperty="true" />
-    <PackageReference Include="System.Resources.Extensions" Version="10.0.0" GeneratePathProperty="true" />
+    <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="10.0.11" GeneratePathProperty="true" />
+    <PackageReference Include="System.Resources.Extensions" Version="10.0.11" GeneratePathProperty="true" />
     <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="6.1.2" GeneratePathProperty="true" />
-    <PackageReference Include="System.Threading.Channels" Version="10.0.3" GeneratePathProperty="true" />
+    <PackageReference Include="System.Threading.Channels" Version="10.0.11" GeneratePathProperty="true" />
     <PackageReference Include="System.Threading.Tasks.Extensions" Version="4.6.3" GeneratePathProperty="true" />
   </ItemGroup>
   <ItemGroup>
