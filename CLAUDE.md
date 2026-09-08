@@ -1,9 +1,13 @@
-# AGENTS.md
+# CLAUDE.md
 
-This file provides guidance to AI agents when working with code in this repository.
+This file exists only so that Claude Code loads the repository's guidance. All of it lives in
+[AGENTS.md](AGENTS.md), which applies to every AI agent. Do not add Claude-specific guidance here —
+put it in AGENTS.md so one document stays authoritative.
 
-## Line Endings
-Preserve existing line endings. After editing Windows source files, normalize the entire touched file to CRLF.
+@AGENTS.md
+
+The rules below are repeated verbatim from AGENTS.md because they must apply even if the import
+above does not resolve.
 
 ## Absolute SQL Server Execution Prohibition
 
