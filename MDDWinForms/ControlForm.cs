@@ -20,8 +20,11 @@ namespace MDDWinForms
         string ContainedControlTypeName;
         string ContainedAssemblyName;
         public Control ContainedControl { get; private set; }
-        public ControlForm(Control ctl, string title = null) : this()
+        private bool useInstanceQualifier = true;
+        public ControlForm(Control ctl, string title = null) : this(ctl, title, true) { }
+        public ControlForm(Control ctl, string title, bool useInstanceQualifier) : this()
         {
+            this.useInstanceQualifier = useInstanceQualifier;
             InitializeForm(ctl, title);
         }
         private void InitializeForm(Control ctl, string title)
@@ -36,7 +39,7 @@ namespace MDDWinForms
                 displayText = icf.DisplayText;
                 icf.DisplayTextChanged += (s, e) => 
                 {
-                    if (!string.IsNullOrWhiteSpace(MDDForms.InstanceQualifier))
+                    if (useInstanceQualifier && !string.IsNullOrWhiteSpace(MDDForms.InstanceQualifier))
                         Text = $"{MDDForms.InstanceQualifier} {e}";
                     else
                         Text = e;
@@ -49,7 +52,7 @@ namespace MDDWinForms
                 else
                     displayText = ctl.Name;
             }
-            if (!string.IsNullOrWhiteSpace(MDDForms.InstanceQualifier)) 
+            if (useInstanceQualifier && !string.IsNullOrWhiteSpace(MDDForms.InstanceQualifier))
                 Text = $"{MDDForms.InstanceQualifier} {displayText}";
             else
                 Text = displayText;

@@ -62,6 +62,11 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Menus\WinFormsMenuDispatcher.cs" />
+    <Compile Include="Menus\MenuLauncherForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Menus\MenuLauncherApplicationContext.cs" />
     <Compile Include="AsyncCommandButton.cs">
       <SubType>Component</SubType>
     </Compile>
