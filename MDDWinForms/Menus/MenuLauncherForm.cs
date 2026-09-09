@@ -24,7 +24,10 @@ namespace MDDWinForms.Menus
         private readonly ListView results = new ListView { Dock = DockStyle.Fill, View = View.Details, FullRowSelect = true, MultiSelect = false, HideSelection = false };
         private readonly Label status = new Label { Dock = DockStyle.Bottom, Height = 28, TextAlign = ContentAlignment.MiddleLeft };
         private readonly ContextMenuStrip itemMenu = new ContextMenuStrip();
+        private readonly ContextMenuStrip treeMenu = new ContextMenuStrip();
         private readonly Panel menuPage = new Panel { Dock = DockStyle.Fill };
+        private int? currentScope;
+        private int? pendingSelection;
         private TabControl pages;
         private readonly CancellationTokenSource cancellation = new CancellationTokenSource();
         private IReadOnlyList<MenuItem> items = new List<MenuItem>();
@@ -60,7 +63,8 @@ namespace MDDWinForms.Menus
             var open = new Button { Text = "Open", AutoSize = true };
             var newInstance = new Button { Text = "Open new instance", AutoSize = true, Enabled = false };
             var favorite = new Button { Text = "Toggle favorite", AutoSize = true, Enabled = false };
-            actions.Controls.AddRange(new Control[] { open, newInstance, favorite });
+            var add = new Button { Text = "Add...", AutoSize = true, Visible = false };
+            actions.Controls.AddRange(new Control[] { open, newInstance, favorite, add });
             menuPage.Controls.Add(split);
             menuPage.Controls.Add(actions);
             menuPage.Controls.Add(status);
@@ -72,15 +76,57 @@ namespace MDDWinForms.Menus
             open.Click += (s, e) => Launch(false);
             newInstance.Click += (s, e) => Launch(true);
             favorite.Click += (s, e) => ToggleFavorite();
+            add.Click += async (s, e) => await AddAsync();
+            Shown += (s, e) => add.Visible = Editor != null;
             results.SelectedIndexChanged += (s, e) => {
                 newInstance.Enabled = SelectedItem?.AllowNewInstance == true;
                 favorite.Enabled = SelectedItem != null && state != null;
             };
             itemMenu.Items.Add("Open/Activate", null, (s, e) => Launch(false));
             var contextOpenNew = itemMenu.Items.Add("Open New", null, (s, e) => Launch(true));
+            var itemSeparator = new ToolStripSeparator();
+            itemMenu.Items.Add(itemSeparator);
+            var itemEdit = itemMenu.Items.Add("Edit...", null, async (s, e) => await EditAsync(SelectedItem));
+            var itemDelete = itemMenu.Items.Add("Delete...", null, async (s, e) => await DeleteAsync(SelectedItem));
+            var itemUp = itemMenu.Items.Add("Move Up", null, async (s, e) => await MoveItemAsync(-1));
+            var itemDown = itemMenu.Items.Add("Move Down", null, async (s, e) => await MoveItemAsync(1));
             itemMenu.Opening += (s, e) => {
                 e.Cancel = SelectedItem == null;
                 contextOpenNew.Visible = SelectedItem?.AllowNewInstance == true;
+                itemSeparator.Visible = Editor != null;
+                itemEdit.Visible = Editor != null;
+                itemDelete.Visible = Editor != null;
+                // Order is per category, so reordering only means something inside one.
+                itemUp.Visible = Editor != null && currentScope.HasValue;
+                itemDown.Visible = itemUp.Visible;
+            };
+            var treeAddCategory = treeMenu.Items.Add("New category...", null, async (s, e) => await NewItemAsync(MenuItemKind.Category));
+            var treeAddItem = treeMenu.Items.Add("New menu item...", null, async (s, e) => await NewItemAsync(MenuItemKind.Action));
+            treeMenu.Items.Add(new ToolStripSeparator());
+            var treeEdit = treeMenu.Items.Add("Edit...", null, async (s, e) => await EditAsync(SelectedCategory));
+            var treeDelete = treeMenu.Items.Add("Delete...", null, async (s, e) => await DeleteAsync(SelectedCategory));
+            var treeUp = treeMenu.Items.Add("Move Up", null, async (s, e) => await MoveCategoryAsync(-1));
+            var treeDown = treeMenu.Items.Add("Move Down", null, async (s, e) => await MoveCategoryAsync(1));
+            treeMenu.Items.Add(new ToolStripSeparator());
+            var treeDefault = treeMenu.Items.Add("Open on this view", null, async (s, e) => await SetDefaultViewAsync());
+            treeMenu.Opening += (s, e) => {
+                if (Editor == null && userStore == null) { e.Cancel = true; return; }
+                // A personal preference, unlike the editing entries above it.
+                treeDefault.Visible = userStore != null && categories.SelectedNode != null;
+                foreach (ToolStripItem entry in treeMenu.Items)
+                    if (entry != treeDefault) entry.Visible = Editor != null;
+                var category = SelectedCategory;
+                treeAddItem.Enabled = category != null;
+                treeEdit.Enabled = category != null;
+                treeDelete.Enabled = category != null;
+                treeUp.Enabled = category != null;
+                treeDown.Enabled = category != null;
+            };
+            categories.MouseUp += (s, e) => {
+                if (e.Button != MouseButtons.Right) return;
+                var node = categories.GetNodeAt(e.X, e.Y);
+                if (node != null) categories.SelectedNode = node;
+                treeMenu.Show(categories, e.Location);
             };
             // Selection is separate from activation; right-click targets the row under the pointer.
             results.MouseDoubleClick += (s, e) => {
@@ -154,12 +200,15 @@ namespace MDDWinForms.Menus
         }
         protected override void Dispose(bool disposing)
         {
-            if (disposing && !disposed) { disposed = true; cancellation.Cancel(); cancellation.Dispose(); itemMenu.Dispose(); }
+            if (disposing && !disposed) { disposed = true; cancellation.Cancel(); cancellation.Dispose(); itemMenu.Dispose(); treeMenu.Dispose(); }
             base.Dispose(disposing);
         }
         public async Task ReloadAsync()
         {
             if (loading || IsDisposed) return;
+            // Captured before the list is cleared, and after an explicit request from an edit.
+            var keepCategory = categories.SelectedNode?.Tag;
+            var keepItem = pendingSelection ?? SelectedItem?.Id;
             loading = true;
             items = new List<MenuItem>(); results.Items.Clear();
             status.Text = "Loading menu...";
@@ -171,11 +220,12 @@ namespace MDDWinForms.Menus
                 state = preferences;
                 items = MenuDefinition.Validate(loaded);
                 categories.Nodes.Clear();
-                var home = categories.Nodes.Add("Home"); home.Tag = "home";
                 if (state != null) { categories.Nodes.Add(new TreeNode("Favorites") { Tag = "favorites" }); categories.Nodes.Add(new TreeNode("Recently used") { Tag = "recent" }); }
                 AddCategories(categories.Nodes, null);
+                categories.Nodes.Add(new TreeNode(AllItemsCaption) { Tag = "all" });
                 categories.ExpandAll();
-                categories.SelectedNode = home;
+                pendingSelection = keepItem;
+                categories.SelectedNode = FindNode(categories.Nodes, keepCategory) ?? DefaultNode();
                 RefreshResults();
             }
             catch (OperationCanceledException) { }
@@ -194,20 +244,22 @@ namespace MDDWinForms.Menus
         private MenuItem SelectedItem => results.SelectedItems.Count == 0 ? null : results.SelectedItems[0].Tag as MenuItem;
         private void RefreshResults()
         {
-            var selectedId = SelectedItem?.Id;
+            var selectedId = SelectedItem?.Id ?? pendingSelection;
+            pendingSelection = null;
             var query = items.Where(i => i.Kind == MenuItemKind.Action);
             var term = search.Text.Trim();
             var selection = categories.SelectedNode?.Tag;
             // The browsed category, when one is selected and no search is narrowing the list.
             var scope = term.Length == 0 && selection is int selected ? selected : (int?)null;
+            currentScope = scope;
             if (term.Length > 0)
                 query = query.Where(i => (i.Title + " " + i.Description + " " + i.Keywords + " " + CategoryPath(i, null)).IndexOf(term, StringComparison.CurrentCultureIgnoreCase) >= 0);
             else if (scope.HasValue)
                 query = query.Where(i => IsInCategory(i, scope.Value));
             else if (Equals(selection, "favorites")) query = query.Where(i => state.Favorites.Contains(i.Id));
             else if (Equals(selection, "recent")) query = query.Where(i => state.LastUsed.ContainsKey(i.Id));
-            var ordered = term.Length == 0 && (Equals(selection, "recent") || Equals(selection, "home"))
-                ? query.OrderByDescending(i => Equals(selection, "home") && state?.Favorites.Contains(i.Id) == true).ThenBy(i => Equals(selection, "home") ? FavoritePosition(i) : int.MaxValue).ThenByDescending(i => state != null && state.LastUsed.TryGetValue(i.Id, out var used) ? used : DateTime.MinValue).ThenBy(i => i.SortOrder).ThenBy(i => i.Title)
+            var ordered = term.Length == 0 && (Equals(selection, "recent") || Equals(selection, "all"))
+                ? query.OrderByDescending(i => Equals(selection, "all") && state?.Favorites.Contains(i.Id) == true).ThenBy(i => Equals(selection, "all") ? FavoritePosition(i) : int.MaxValue).ThenByDescending(i => state != null && state.LastUsed.TryGetValue(i.Id, out var used) ? used : DateTime.MinValue).ThenBy(i => i.SortOrder).ThenBy(i => i.Title)
                 : scope.HasValue
                 ? query.OrderBy(i => OrderInCategory(i, scope.Value)).ThenBy(i => i.SortOrder).ThenBy(i => i.Title)
                 : query.OrderBy(i => term.Length == 0 && Equals(selection, "favorites") ? FavoritePosition(i) : int.MaxValue).ThenBy(i => i.SortOrder).ThenBy(i => i.Title);
@@ -223,6 +275,193 @@ namespace MDDWinForms.Menus
             status.Text = results.Items.Count == 0 ? "No matching menu items." : $"{results.Items.Count} items • Double-click/Enter: open • Right-click: options • Ctrl+Enter: new • Ctrl+F: search";
         }
         private int FavoritePosition(MenuItem item) => state != null && state.Favorites.Contains(item.Id) && state.FavoriteOrder.TryGetValue(item.Id, out var order) ? order : int.MaxValue;
+        /// <summary>The write side of the menu. Editing affordances appear only when this is set;
+        /// a read-only provider simply leaves it null.</summary>
+        public IMenuEditor Editor { get; set; }
+
+        /// <summary>Caption of the view listing every menu item.</summary>
+        public string AllItemsCaption { get; set; } = "(All Items)";
+        private const string DefaultViewSetting = "DefaultView";
+
+        /// <summary>The view to open on. An explicit choice wins; otherwise favourites, then recently
+        /// used, then the first category - so the launcher opens somewhere useful rather than on a
+        /// list of everything.</summary>
+        private TreeNode DefaultNode()
+        {
+            if (state != null && state.Settings.TryGetValue(DefaultViewSetting, out var configured)
+                && !string.IsNullOrWhiteSpace(configured))
+            {
+                object tag = configured;
+                if (configured.StartsWith("category:", StringComparison.OrdinalIgnoreCase)
+                    && int.TryParse(configured.Substring("category:".Length), out var categoryId)) tag = categoryId;
+                var chosen = FindNode(categories.Nodes, tag);
+                if (chosen != null) return chosen;
+            }
+            if (state != null && state.Favorites.Count > 0) return FindNode(categories.Nodes, "favorites");
+            if (state != null && state.LastUsed.Count > 0) return FindNode(categories.Nodes, "recent");
+            return FirstCategoryNode(categories.Nodes) ?? FindNode(categories.Nodes, "all");
+        }
+        private static TreeNode FirstCategoryNode(TreeNodeCollection nodes)
+        {
+            foreach (TreeNode node in nodes) if (node.Tag is int) return node;
+            return null;
+        }
+        private async Task SetDefaultViewAsync()
+        {
+            var node = categories.SelectedNode;
+            if (userStore == null || state == null || node == null) return;
+            var value = node.Tag is int id ? "category:" + id : node.Tag as string;
+            if (value == null) return;
+            try
+            {
+                await userStore.SetSettingAsync(applicationKey, DefaultViewSetting, value, cancellation.Token);
+                state.Settings[DefaultViewSetting] = value;
+                status.Text = $"{node.Text} is now the view this menu opens on.";
+            }
+            catch (OperationCanceledException) { }
+            catch (Exception ex) { Report(ex, "The default view could not be saved"); }
+        }
+
+        private MenuItem SelectedCategory =>
+            categories.SelectedNode?.Tag is int id ? Category(id) : null;
+        private static TreeNode FindNode(TreeNodeCollection nodes, object tag)
+        {
+            if (tag == null) return null;
+            foreach (TreeNode node in nodes)
+            {
+                if (Equals(node.Tag, tag)) return node;
+                var found = FindNode(node.Nodes, tag);
+                if (found != null) return found;
+            }
+            return null;
+        }
+        private async Task AddAsync()
+        {
+            using (var choice = new AddChoiceDialog())
+                if (choice.ShowDialog(this) == DialogResult.OK) await NewItemAsync(choice.Kind);
+        }
+        private async Task NewItemAsync(MenuItemKind kind)
+        {
+            if (Editor == null) return;
+            if (kind == MenuItemKind.Action && !items.Any(i => i.Kind == MenuItemKind.Category))
+            {
+                MessageBox.Show(this, "Create a category first - every menu item belongs to one.", "Nothing to add it to",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+            var fresh = new MenuItem { Kind = kind, Title = "" };
+            // Adding from inside a category pre-fills it, which also satisfies "at least one".
+            var inside = SelectedCategory;
+            if (inside != null)
+            {
+                if (kind == MenuItemKind.Action) fresh.Categories.Add(new MenuCategoryRef { CategoryId = inside.Id });
+                else fresh.ParentId = inside.Id;
+            }
+            await EditAsync(fresh);
+        }
+        private async Task EditAsync(MenuItem target)
+        {
+            if (Editor == null || target == null || loading) return;
+            var before = target.Categories.Select(c => c.CategoryId).ToList();
+            using (var dialog = new MenuItemEditDialog(Clone(target), items))
+            {
+                if (dialog.ShowDialog(this) != DialogResult.OK) return;
+                try
+                {
+                    var edited = dialog.Result;
+                    var id = await Editor.SaveAsync(applicationKey, edited, cancellation.Token);
+                    if (edited.Kind == MenuItemKind.Action)
+                    {
+                        foreach (var added in edited.Categories.Select(c => c.CategoryId).Except(before))
+                            await Editor.SetCategoryAsync(applicationKey, id, added, null, cancellation.Token);
+                        foreach (var removed in before.Except(edited.Categories.Select(c => c.CategoryId)))
+                            await Editor.RemoveCategoryAsync(applicationKey, id, removed, cancellation.Token);
+                    }
+                    pendingSelection = id;
+                    await ReloadAsync();
+                }
+                catch (OperationCanceledException) { }
+                catch (Exception ex) { Report(ex, "The menu could not be saved"); }
+            }
+        }
+        private async Task DeleteAsync(MenuItem target)
+        {
+            if (Editor == null || target == null || loading) return;
+            int? moveTo = null;
+            if (target.Kind == MenuItemKind.Category)
+            {
+                var occupants = items.Count(i => i.ParentId == target.Id || i.Categories.Any(c => c.CategoryId == target.Id));
+                if (occupants > 0)
+                {
+                    var destinations = items.Where(i => i.Kind == MenuItemKind.Category && i.Id != target.Id).ToList();
+                    if (destinations.Count == 0)
+                    {
+                        MessageBox.Show(this, $"\"{target.Title}\" still holds {occupants} item(s) and there is nowhere to move them.",
+                            "Cannot delete", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        return;
+                    }
+                    using (var chooser = new CategoryChooserDialog(target, occupants, destinations))
+                    {
+                        if (chooser.ShowDialog(this) != DialogResult.OK) return;
+                        moveTo = chooser.CategoryId;
+                    }
+                }
+                else if (MessageBox.Show(this, $"Delete the category \"{target.Title}\"?", "Delete",
+                    MessageBoxButtons.OKCancel, MessageBoxIcon.Question) != DialogResult.OK) return;
+            }
+            else if (MessageBox.Show(this, $"Delete \"{target.Title}\"? Its usage history is kept and it can be restored.",
+                "Delete", MessageBoxButtons.OKCancel, MessageBoxIcon.Question) != DialogResult.OK) return;
+            try
+            {
+                await Editor.RetireAsync(applicationKey, target.Id, moveTo, cancellation.Token);
+                await ReloadAsync();
+            }
+            catch (OperationCanceledException) { }
+            catch (Exception ex) { Report(ex, "It could not be deleted"); }
+        }
+        private async Task MoveCategoryAsync(int delta)
+        {
+            var category = SelectedCategory;
+            if (Editor == null || category == null || loading) return;
+            try
+            {
+                await Editor.MoveCategoryAsync(applicationKey, category.Id, delta, cancellation.Token);
+                await ReloadAsync();
+            }
+            catch (OperationCanceledException) { }
+            catch (Exception ex) { Report(ex, "It could not be moved"); }
+        }
+        private async Task MoveItemAsync(int delta)
+        {
+            var target = SelectedItem;
+            if (Editor == null || target == null || !currentScope.HasValue || loading) return;
+            // Reordering applies to the placement being browsed, which may be in a subcategory.
+            var placement = PlacementUnder(target, currentScope.Value);
+            if (placement == null) return;
+            try
+            {
+                await Editor.MoveInCategoryAsync(applicationKey, target.Id, placement.CategoryId, delta, cancellation.Token);
+                pendingSelection = target.Id;
+                await ReloadAsync();
+            }
+            catch (OperationCanceledException) { }
+            catch (Exception ex) { Report(ex, "It could not be moved"); }
+        }
+        private void Report(Exception ex, string caption)
+        {
+            if (IsDisposed) return;
+            MessageBox.Show(this, ex.GetBaseException().Message, caption, MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+        private static MenuItem Clone(MenuItem source) => new MenuItem {
+            Id = source.Id, ParentId = source.ParentId, Kind = source.Kind, Title = source.Title,
+            Description = source.Description, IconKey = source.IconKey, Keywords = source.Keywords,
+            SortOrder = source.SortOrder, TargetKind = source.TargetKind, TargetTypeName = source.TargetTypeName,
+            AssemblyName = source.AssemblyName, ProcedureName = source.ProcedureName,
+            ExecutablePath = source.ExecutablePath, Arguments = source.Arguments,
+            DefaultLaunchMode = source.DefaultLaunchMode, AllowNewInstance = source.AllowNewInstance,
+            Categories = source.Categories.Select(c => new MenuCategoryRef { CategoryId = c.CategoryId, SortOrder = c.SortOrder }).ToList()
+        };
+
         private MenuItem Category(int id) => items.FirstOrDefault(i => i.Id == id && i.Kind == MenuItemKind.Category);
         // An action is shown under a category it is placed in, and under that category's ancestors.
         private bool IsInCategory(MenuItem item, int category) =>
