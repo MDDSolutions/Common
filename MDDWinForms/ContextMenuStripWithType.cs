@@ -14,7 +14,17 @@ namespace MDDWinForms
         public Form OwnerForm { get; set; }
 
         public static Type LoaderType { get; set; } = null;
-        
+
+        /// <summary>
+        /// Application-wide counterpart to <see cref="NewDetailsHandlerAsync"/>, for a details screen
+        /// that is a UserControl in a ControlForm rather than a Form with a parameterless constructor,
+        /// which is all <see cref="LoaderType"/> can build. Tried before LoaderType; return null to
+        /// decline, and LoaderType is used instead - that is how an application offers both and lets
+        /// a setting choose between them without a restart.
+        /// </summary>
+        public static Func<T, object, Task<HandlerBase<T>>> NewDetailsHandlerFactory { get; set; } = null;
+
+
         private T currentobject;
         public T CurrentObject 
         {
@@ -46,7 +56,7 @@ namespace MDDWinForms
         /// </summary>
         public virtual void Initialize()
         {
-            if (NewDetailsHandlerAsync != null || LoaderType != null)
+            if (NewDetailsHandlerAsync != null || NewDetailsHandlerFactory != null || LoaderType != null)
             {
                 if (!Items.OfType<ToolStripMenuItem>().Any(x => x.Text == "Details <new>"))
                 {
@@ -140,23 +150,26 @@ namespace MDDWinForms
         }
         public virtual async void Details_Click(object sender, EventArgs e)
         {
-            if (sender == detailsnew && NewDetailsHandlerAsync != null)
+            var newdetails = NewDetailsHandlerAsync ?? NewDetailsHandlerFactory;
+            if (sender == detailsnew && newdetails != null)
             {
-                var handler = await NewDetailsHandlerAsync(CurrentObject, null);
+                var handler = await newdetails(CurrentObject, null);
                 if (handler != null)
                 {
                     if (handler.ReferencingObject == null)
                         handler.ReferencingObject = OwnerForm;
                     HandlerDetailsClicked?.Invoke(handler);
                     DetailsClicked?.Invoke(handler);
+                    ContextActionTaken?.Invoke(sender, CurrentObject);
+                    return;
                 }
-                ContextActionTaken?.Invoke(sender, CurrentObject);
-                return;
+                // The factory declined, so fall through to LoaderType.
             }
 
             var tsm = sender as ToolStripMenuItemWithContext<ILoader<T>>;
             if (tsm?.ContextObject == null)
             {
+                if (LoaderType == null) return;
                 var frm = NewDetailForm();
                 await frm.LoadItemAsync(CurrentObject);
                 frm.ReferencingObject = OwnerForm;

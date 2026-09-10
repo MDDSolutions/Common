@@ -80,7 +80,9 @@
     <Compile Include="frmEditor.Designer.cs">
       <DependentUpon>frmEditor.cs</DependentUpon>
     </Compile>
-    <Compile Include="QuickRunControl.cs" />
+    <Compile Include="QuickRunControl.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
     <Compile Include="ParamControl.cs">
       <SubType>Component</SubType>
     </Compile>

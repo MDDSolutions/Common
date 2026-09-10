@@ -189,8 +189,13 @@ namespace MDDWinForms.Menus
                     ? had : new MenuCategoryRef { CategoryId = id, SortOrder = 0 }).ToList();
             }
             // Validate against the whole definition so the same rules that gate loading gate saving.
+            // A new item has no id until the editor saves it, and Validate requires a positive one -
+            // so stand in an unused id for the check and put it back afterwards.
+            var actualId = item.Id;
+            if (actualId <= 0) item.Id = allItems.Count == 0 ? 1 : allItems.Max(i => i.Id) + 1;
             try { MenuDefinition.Validate(allItems.Where(i => i.Id != item.Id).Concat(new[] { item }).ToList()); }
             catch (Exception ex) { return Fail(ex.Message); }
+            finally { item.Id = actualId; }
             return true;
         }
         private bool Fail(string message) { problem.Text = message; return false; }

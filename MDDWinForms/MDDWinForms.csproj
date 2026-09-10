@@ -88,6 +88,9 @@
     <Compile Include="ControlForm.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="ctlScreenPixelProbe.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
     <Compile Include="ControlForm.Designer.cs">
       <DependentUpon>ControlForm.cs</DependentUpon>
     </Compile>
