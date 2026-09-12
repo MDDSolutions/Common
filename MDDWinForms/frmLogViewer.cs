@@ -17,6 +17,7 @@ namespace MDDWinForms
         public frmLogViewer()
         {
             InitializeComponent();
+            Icon = (System.Drawing.Icon)new System.ComponentModel.ComponentResourceManager(typeof(frmLogViewer)).GetObject("$this.Icon");
             LoadActiveLogs();
             bsEntries.DataSource = _displayedEntries;
         }

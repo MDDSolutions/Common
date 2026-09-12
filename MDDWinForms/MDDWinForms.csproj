@@ -274,4 +274,15 @@
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <ItemGroup>
+    <None Include="Resources\Icons\workspaces.ico" />
+    <None Include="Resources\Icons\log.ico" />
+    <EmbeddedResource Include="ctlScreenPixelProbe.resx">
+      <DependentUpon>ctlScreenPixelProbe.cs</DependentUpon>
+      <LogicalName>MDDWinForms.ctlScreenPixelProbe.resources</LogicalName>
+    </EmbeddedResource>
+    <None Include="Resources\Icons\probe.ico" />
+    <None Include="Resources\Icons\image-edit.ico" />
+    <Compile Include="WindowInstanceIcons.cs" />
+  </ItemGroup>
 </Project>

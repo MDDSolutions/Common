@@ -68,6 +68,7 @@ namespace MDDWinForms
             foreach (var item in Items.OfType<ToolStripMenuItemWithContext<HandlerBase<T>>>().Where(x => IsDetailsHandler(x.ContextObject) && !handlerdetailsitems.Contains(x)).ToList())
             {
                 Items.Remove(item);
+                item.Dispose();
             }
             foreach (var item in handlerdetailsitems.ToList())
             {
@@ -75,6 +76,7 @@ namespace MDDWinForms
                 {
                     handlerdetailsitems.Remove(item);
                     Items.Remove(item);
+                    item.Dispose();
                 }
             }
             foreach (var handler in HandlerBase<T>.Instances.Where(IsAvailableDetailsHandler))
@@ -88,6 +90,7 @@ namespace MDDWinForms
                     handlerdetailsitems.Add(item);
                     Items.Insert(detailsindex, item);
                 }
+                WindowInstanceIcons.BindMenuItem(item, handler);
             }
             foreach (var item in detailsitems.ToList())
             {
@@ -196,6 +199,7 @@ namespace MDDWinForms
         private bool IsAvailableDetailsHandler(HandlerBase<T> handler)
         {
             return handler != null
+                && HandlerBase<T>.Instances.Contains(handler)
                 && IsDetailsHandler(handler)
                 && handler.IsActive
                 && handler.ValidFor(CurrentObject);

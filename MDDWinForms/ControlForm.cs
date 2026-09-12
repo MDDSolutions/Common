@@ -31,6 +31,18 @@ namespace MDDWinForms
         {
             ContainedControl = ctl;
 
+            // UserControls can carry the same $this.Icon resource as a Form. Apply it
+            // here so menu launches, direct wrappers and restored workspaces agree.
+            // Code-only controls need not have a resource set at all.
+            var controlType = ctl.GetType();
+            if (controlType.Assembly.GetManifestResourceInfo(controlType.FullName + ".resources") != null)
+            {
+                var resources = new ComponentResourceManager(controlType);
+                var icon = resources.GetObject("$this.Icon") as Icon;
+                if (icon != null)
+                    Icon = icon;
+            }
+
             Name = $"ControlForm:{ctl.Name}";
             
             string displayText = null;

@@ -543,7 +543,14 @@ namespace MDDWinForms
             }
             if (!contains)
             {
-                if (!string.IsNullOrWhiteSpace(InstanceQualifier)) frm.Text = $"{InstanceQualifier} {frm.Text}";
+                // Guarded because a ControlForm applies the qualifier itself, from its contained
+                // control's DisplayText - without this, such a window shows it twice ("# # Title").
+                // WinFormsMenuDispatcher has the same guard for the same reason.
+                if (!string.IsNullOrWhiteSpace(InstanceQualifier))
+                {
+                    var prefix = InstanceQualifier + " ";
+                    if (!frm.Text.StartsWith(prefix, StringComparison.Ordinal)) frm.Text = prefix + frm.Text;
+                }
             }
             frm.Show();
         }

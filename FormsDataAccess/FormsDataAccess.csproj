@@ -120,4 +120,11 @@
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <ItemGroup>
+    <EmbeddedResource Include="QuickRunControl.resx">
+      <DependentUpon>QuickRunControl.cs</DependentUpon>
+      <LogicalName>FormsDataAccess.QuickRunControl.resources</LogicalName>
+    </EmbeddedResource>
+    <None Include="Resources\Icons\quickrun.ico" />
+  </ItemGroup>
 </Project>

@@ -25,6 +25,7 @@ namespace MDDWinForms.Menus
         private readonly Label status = new Label { Dock = DockStyle.Bottom, Height = 28, TextAlign = ContentAlignment.MiddleLeft };
         private readonly ContextMenuStrip itemMenu = new ContextMenuStrip();
         private readonly ContextMenuStrip treeMenu = new ContextMenuStrip();
+        private readonly ImageList menuImages = new ImageList { ColorDepth = ColorDepth.Depth32Bit, ImageSize = new Size(20, 20) };
         private readonly Panel menuPage = new Panel { Dock = DockStyle.Fill };
         private int? currentScope;
         private int? pendingSelection;
@@ -59,6 +60,7 @@ namespace MDDWinForms.Menus
             results.Columns.Add("Menu item", 260);
             results.Columns.Add("Category", 150);
             results.Columns.Add("Description", 340);
+            results.SmallImageList = menuImages;
             var actions = new FlowLayoutPanel { Dock = DockStyle.Bottom, Height = 40 };
             var open = new Button { Text = "Open", AutoSize = true };
             var newInstance = new Button { Text = "Open new instance", AutoSize = true, Enabled = false };
@@ -186,6 +188,10 @@ namespace MDDWinForms.Menus
         /// <summary>Caption of the menu's own tab. Only read when the first page is added.</summary>
         public string MenuPageTitle { get; set; } = "Menu";
 
+        /// <summary>Optional host-supplied icons. The host retains ownership of the returned icons;
+        /// the launcher copies them into its image list without constructing target controls.</summary>
+        public Func<MenuItem, Icon> IconResolver { get; set; }
+
         // WorkspaceManager captures every open form unless it opts out here. The launcher is the
         // application's own window, so it is not a workspace member - as frmMainMenu was not.
         public bool IgnoreWorkspaceState => true;
@@ -200,7 +206,7 @@ namespace MDDWinForms.Menus
         }
         protected override void Dispose(bool disposing)
         {
-            if (disposing && !disposed) { disposed = true; cancellation.Cancel(); cancellation.Dispose(); itemMenu.Dispose(); treeMenu.Dispose(); }
+            if (disposing && !disposed) { disposed = true; cancellation.Cancel(); cancellation.Dispose(); itemMenu.Dispose(); treeMenu.Dispose(); menuImages.Dispose(); }
             base.Dispose(disposing);
         }
         public async Task ReloadAsync()
@@ -211,6 +217,7 @@ namespace MDDWinForms.Menus
             var keepItem = pendingSelection ?? SelectedItem?.Id;
             loading = true;
             items = new List<MenuItem>(); results.Items.Clear();
+            menuImages.Images.Clear();
             status.Text = "Loading menu...";
             try
             {
@@ -268,6 +275,16 @@ namespace MDDWinForms.Menus
             foreach (var item in ordered)
             {
                 var row = new ListViewItem((state?.Favorites.Contains(item.Id) == true ? "★ " : "") + item.Title) { Tag = item };
+                if (IconResolver != null)
+                {
+                    var imageKey = item.Id.ToString();
+                    if (!menuImages.Images.ContainsKey(imageKey))
+                    {
+                        var icon = IconResolver(item);
+                        if (icon != null) menuImages.Images.Add(imageKey, icon);
+                    }
+                    if (menuImages.Images.ContainsKey(imageKey)) row.ImageKey = imageKey;
+                }
                 row.SubItems.Add(CategoryPath(item, scope)); row.SubItems.Add(item.Description ?? "");
                 results.Items.Add(row); row.Selected = item.Id == selectedId;
             }
