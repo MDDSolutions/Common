@@ -1,8 +1,6 @@
 {
   "permissions": {
     "deny": [
-      "Bash(sqlcmd *)",
-      "PowerShell(sqlcmd *)",
       "Bash(osql *)",
       "PowerShell(osql *)",
       "Bash(bcp *)",
@@ -77,6 +75,10 @@
       "PowerShell(git worktree *)",
       "Bash(git init *)",
       "PowerShell(git init *)"
+    ],
+    "allow": [
+      "Bash(sqlcmd -S 'MDD-SQL2022' -d 'Other' -U 'AIAgentReadOnly':*)",
+      "PowerShell(sqlcmd -S 'MDD-SQL2022' -d 'Other' -U 'AIAgentReadOnly':*)"
     ]
   }
 }
