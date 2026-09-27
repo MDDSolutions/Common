@@ -173,6 +173,23 @@ namespace FormsDataAccess
         public void PrepareEditingControlForEdit(bool selectAll)
         {
         }
+        protected override void MoveFocusAfterDropDown(bool forward)
+        {
+            DataGridView dataGridView = EditingControlDataGridView;
+            if (dataGridView == null || dataGridView.IsDisposed)
+            {
+                base.MoveFocusAfterDropDown(forward);
+                return;
+            }
+
+            dataGridView.BeginInvoke(new MethodInvoker(() =>
+            {
+                if (dataGridView.IsDisposed) return;
+
+                dataGridView.Focus();
+                SendKeys.Send(forward ? "{TAB}" : "+{TAB}");
+            }));
+        }
         protected override void OnValueChanged(EventArgs eventargs)
         {
             // Notify the DataGridView that the contents of the cell

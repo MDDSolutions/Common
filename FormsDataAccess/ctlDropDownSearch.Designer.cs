@@ -94,11 +94,7 @@
             this.lbxListItems.Name = "lbxListItems";
             this.lbxListItems.Size = new System.Drawing.Size(312, 212);
             this.lbxListItems.TabIndex = 0;
-            this.lbxListItems.SelectedIndexChanged += new System.EventHandler(this.lbxAccounts_SelectedIndexChanged);
-            // 
-            // bsListItems
-            // 
-            this.bsListItems.CurrentItemChanged += new System.EventHandler(this.bsListItems_CurrentItemChanged);
+            this.lbxListItems.MouseClick += new System.Windows.Forms.MouseEventHandler(this.lbxListItems_MouseClick);
             // 
             // ctlDropDownSearch
             // 

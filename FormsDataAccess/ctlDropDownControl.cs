@@ -44,6 +44,7 @@ namespace FormsDataAccess
             InitializeComponent();
             storedSize = Size;
             BackColor = Color.White;
+            TabStop = true;
             Text = Name;
         }
         public void InitializeDropDown(Control dropDownItem)
@@ -65,11 +66,10 @@ namespace FormsDataAccess
         private Size _defaultDropDownSize;
         public Size DropDownSize
         {
-            get
-            {
-                if (_dropDownItem == null) return _defaultDropDownSize;
-                return _dropDownItem.Size;
-            }
+            // The hosted control is resized to the popup's client area. Keeping the
+            // requested size separately prevents the window border from shrinking
+            // the popup again each time it is opened.
+            get { return _defaultDropDownSize; }
             set
             {
                 _defaultDropDownSize = value;
@@ -148,6 +148,26 @@ namespace FormsDataAccess
             mousePressed = false;
             this.Invalidate();
         }
+        protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
+        {
+            Keys keyCode = keyData & Keys.KeyCode;
+            Keys modifiers = keyData & Keys.Modifiers;
+            if (DropState == eDropState.Closed &&
+                ((keyCode == Keys.F4 && modifiers == Keys.None) ||
+                 (keyCode == Keys.Enter && modifiers == Keys.None) ||
+                 (keyCode == Keys.Space && modifiers == Keys.None) ||
+                 (keyCode == Keys.Down && modifiers == Keys.Alt)))
+            {
+                OpenDropDown();
+                return true;
+            }
+
+            return base.ProcessCmdKey(ref msg, keyData);
+        }
+        internal virtual bool ProcessDropDownKey(Keys keyData)
+        {
+            return false;
+        }
         protected virtual bool CanDrop
         {
             get
@@ -172,14 +192,15 @@ namespace FormsDataAccess
 
             if (!CanDrop) return;
 
-            Rectangle r = new Rectangle(GetDropDownLocation(),
-               new Size(DropDownSize.Width + 16, DropDownSize.Height + 4));
-
-            dropContainer = new DropDownContainer(_dropDownItem, this, r);
+            dropContainer = new DropDownContainer(_dropDownItem, this, GetDropDownLocation(), DropDownSize);
             dropContainer.DropStateChange += new DropDownContainer.DropWindowArgs(dropContainer_DropStateChange);
             dropContainer.FormClosed += new FormClosedEventHandler(dropContainer_Closed);
             DropState = eDropState.Dropping;
-            dropContainer.Show();
+            Form owner = FindForm();
+            if (owner == null)
+                dropContainer.Show();
+            else
+                dropContainer.Show(owner);
             Dropping?.Invoke(this, null);
             DropState = eDropState.Dropped;
             Invalidate();
@@ -270,7 +291,7 @@ namespace FormsDataAccess
             public bool Freeze;
             public bool Loading = true;
             public ctlDropDownControl DropDownControl { get; set; }
-            public DropDownContainer(Control dropDownItem, ctlDropDownControl dropDownControl, Rectangle bounds)
+            public DropDownContainer(Control dropDownItem, ctlDropDownControl dropDownControl, Point location, Size clientSize)
             {
                 Name = "frmDropDown";
                 DropDownControl = dropDownControl;
@@ -281,10 +302,18 @@ namespace FormsDataAccess
                 FormBorderStyle = FormBorderStyle.SizableToolWindow;
                 StartPosition = FormStartPosition.Manual;
                 ShowInTaskbar = false;
-                Bounds = bounds;
-                dropDownItem.Bounds = new Rectangle(0, 0, ClientSize.Width, ClientSize.Height);
+                Location = location;
+                ClientSize = clientSize;
+                dropDownItem.Dock = DockStyle.Fill;
                 Controls.Add(dropDownItem);
                 Application.AddMessageFilter(this);
+            }
+            protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
+            {
+                if (DropDownControl.ProcessDropDownKey(keyData))
+                    return true;
+
+                return base.ProcessCmdKey(ref msg, keyData);
             }
             public bool PreFilterMessage(ref Message m)
             {
@@ -317,7 +346,7 @@ namespace FormsDataAccess
                 base.OnResize(e);
                 if (!Loading)
                 {
-                    DropDownControl.DropDownSize = new Size(Width - 16, Height - 4);
+                    DropDownControl.DropDownSize = ClientSize;
                     //DropDownControl.PrintSizes(this);
                 }
             }

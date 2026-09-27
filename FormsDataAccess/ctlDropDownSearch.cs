@@ -39,6 +39,9 @@ namespace FormsDataAccess
         private PropertyInfo valueproperty = null;
         private Type type = null;
         private bool NullValue = true;
+        // The binding source tracks the highlighted search result; this field tracks
+        // the value the user actually committed with the mouse, Enter, or Tab.
+        private object currentSelection = null;
         public event EventHandler ValueChanged;
         protected virtual void OnValueChanged(EventArgs eventargs)
         {
@@ -79,22 +82,19 @@ namespace FormsDataAccess
 
                 originaldata = value;
             }
-            searching = true;
             lbxListItems.DisplayMember = DisplayMember;
             bsListItems.DataSource = value;
-            searching = false;
         }
         public string DisplayMember { get; set; } = "Must be set to valid property name";
         public string ValueMember { get; set; } = "Must be set to valid property name";
         public event EventHandler UserSelectionChanged;
-        private object lastselected = null;
-        private bool searching = false;
-        private void lbxAccounts_SelectedIndexChanged(object sender, EventArgs e)
+        private void lbxListItems_MouseClick(object sender, MouseEventArgs e)
         {
-            if (this.DropState == eDropState.Dropping || this.DropState == eDropState.Closing) return;
-            if (searching) return;
-            if (lbxListItems.SelectedItems.Count == 0) return;
-            ConfirmSelection(lbxListItems.SelectedItems[0]);
+            int index = lbxListItems.IndexFromPoint(e.Location);
+            if (index == ListBox.NoMatches) return;
+
+            lbxListItems.SelectedIndex = index;
+            ConfirmCurrentItem();
         }
         public object CurrentSelection 
         { 
@@ -102,32 +102,31 @@ namespace FormsDataAccess
             {
                 if (DesignMode) return null;
                 if (NullValue) return null;
-                return bsListItems.Current; 
+                return currentSelection;
             }
             set
             {
+                bool selectionChanged = NullValue != (value == null) ||
+                    (value != null && !value.Equals(currentSelection));
+
                 if (value == null)
                 {
                     NullValue = true;
+                    currentSelection = null;
                     Text = null;
+                    if (selectionChanged)
+                        OnValueChanged(EventArgs.Empty);
                     return;
                 }
-                else
-                {
-                    NullValue = false;
-                }
+
+                NullValue = false;
+                currentSelection = value;
                 int index = bsListItems.IndexOf(value);
-
-
-                //causing errors - not sure why...
-                //if (index == -1 && !DesignMode)
-                //    throw new KeyNotFoundException($"Item {value} not found in bsListItems");
-
-
-
-                //lastselected = value; //this prevents UserSelectionChanged event from firing when Selection is changed programmatically
-                //except that it is also preventing the event from firing when it is changed by the User - which defeats the purpose...
-                bsListItems.Position = index;
+                if (index >= 0)
+                    bsListItems.Position = index;
+                SetDisplayText(value);
+                if (selectionChanged)
+                    OnValueChanged(EventArgs.Empty);
             }
         }
         public object Value
@@ -198,35 +197,100 @@ namespace FormsDataAccess
             txtSearch.SelectAll();
             txtSearch.Focus();
         }
-        private void bsListItems_CurrentItemChanged(object sender, EventArgs e)
+        internal override bool ProcessDropDownKey(Keys keyData)
         {
-            if (this.DropState == eDropState.Dropping || this.DropState == eDropState.Closing) return;
-            if (bsListItems.Current == null) return;
-            if (searching) return;
+            Keys keyCode = keyData & Keys.KeyCode;
+            Keys modifiers = keyData & Keys.Modifiers;
+            if (modifiers != Keys.None && !(keyCode == Keys.Tab && modifiers == Keys.Shift))
+                return false;
 
-            var selected = bsListItems.Current;
-            if (selected != null) ConfirmSelection(selected);
+            switch (keyCode)
+            {
+                case Keys.Tab:
+                    ConfirmCurrentItem();
+                    MoveFocusAfterDropDown((keyData & Keys.Shift) != Keys.Shift);
+                    return true;
+                case Keys.Enter:
+                    ConfirmCurrentItem();
+                    Focus();
+                    return true;
+                case Keys.Escape:
+                    CloseDropDown();
+                    Focus();
+                    return true;
+                case Keys.Down:
+                    MoveCurrentItem(1);
+                    return true;
+                case Keys.Up:
+                    MoveCurrentItem(-1);
+                    return true;
+                case Keys.PageDown:
+                    MoveCurrentItem(Math.Max(1, lbxListItems.ClientSize.Height / lbxListItems.ItemHeight - 1));
+                    return true;
+                case Keys.PageUp:
+                    MoveCurrentItem(-Math.Max(1, lbxListItems.ClientSize.Height / lbxListItems.ItemHeight - 1));
+                    return true;
+                case Keys.Home:
+                    MoveToItem(0);
+                    return true;
+                case Keys.End:
+                    MoveToItem(bsListItems.Count - 1);
+                    return true;
+            }
+
+            return false;
         }
-        private void ConfirmSelection(object selected)
+        protected virtual void MoveFocusAfterDropDown(bool forward)
         {
+            Control parent = Parent;
+            if (parent != null)
+                parent.SelectNextControl(this, forward, true, true, true);
+        }
+        private void MoveCurrentItem(int offset)
+        {
+            if (bsListItems.Count == 0) return;
+
+            int position = bsListItems.Position;
+            if (position < 0)
+                position = offset > 0 ? -1 : bsListItems.Count;
+            MoveToItem(position + offset);
+        }
+        private void MoveToItem(int position)
+        {
+            if (bsListItems.Count == 0) return;
+
+            bsListItems.Position = Math.Max(0, Math.Min(position, bsListItems.Count - 1));
+        }
+        private void ConfirmCurrentItem()
+        {
+            if (bsListItems.Current != null)
+                ConfirmSelection(bsListItems.Current);
+            else
+                CloseDropDown();
+        }
+        private void SetDisplayText(object selected)
+        {
+            if (selected == null)
+            {
+                Text = null;
+                return;
+            }
+
             if (!TreatTextAsValue)
                 Text = displayproperty.GetValue(selected).ToString();
             else
                 Text = valueproperty.GetValue(selected).ToString();
-            CurrentSelection = selected;
+        }
+        private void ConfirmSelection(object selected)
+        {
+            bool selectionChanged = NullValue || !selected.Equals(currentSelection);
+            NullValue = false;
+            currentSelection = selected;
+            SetDisplayText(selected);
             CloseDropDown();
-            OnValueChanged(null);
-            if (lastselected == null)
+            if (selectionChanged)
             {
-                if (selected != null)
-                {
-                    lastselected = selected;
-                    UserSelectionChanged?.Invoke(this, null);
-                }
-            }
-            else if (!lastselected.Equals(selected))
-            {
-                lastselected = selected;
+                OnValueChanged(EventArgs.Empty);
                 UserSelectionChanged?.Invoke(this, null);
             }
         }

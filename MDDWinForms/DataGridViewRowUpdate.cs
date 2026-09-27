@@ -299,18 +299,22 @@ namespace MDDWinForms
 
             //Add row numbers to row header
             var rowIdx = (e.RowIndex + 1).ToString();
-            var centerFormat = new StringFormat()
+            using (var centerFormat = new StringFormat()
             {
                 // right alignment might actually make more sense for numbers
                 Alignment = StringAlignment.Center,
                 LineAlignment = StringAlignment.Center
-            };
-            var headerBounds = new Rectangle(e.RowBounds.Left, e.RowBounds.Top, RowHeadersWidth, e.RowBounds.Height);
-            e.Graphics.DrawString(rowIdx, this.Font, SystemBrushes.ControlText, headerBounds, centerFormat);
+            })
+            {
+                var headerBounds = new Rectangle(e.RowBounds.Left, e.RowBounds.Top, RowHeadersWidth, e.RowBounds.Height);
+                e.Graphics.DrawString(rowIdx, Font, SystemBrushes.ControlText, headerBounds, centerFormat);
+            }
         }
         protected override void OnRowValidating(DataGridViewCellCancelEventArgs e)
         {
             base.OnRowValidating(e);
+            if (e.Cancel) return;
+
             if (oldRowIndex == e.RowIndex && (UserChangedRowValidated != null || UserChangedRowValidating != null))
             {
                 if (IsDifferent(e.RowIndex))
@@ -321,6 +325,7 @@ namespace MDDWinForms
                         oldRowIndex = -1;
                         UserChangedRowValidated?.Invoke(this, new DataGridViewRowEventArgs(Rows[e.RowIndex]));
                     }
+                    return;
                 }
             }
             oldRowIndex = -1;
